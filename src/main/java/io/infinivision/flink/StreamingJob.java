@@ -19,6 +19,7 @@
 package io.infinivision.flink;
 
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.TableEnvironment;
 
 /**
  * Skeleton for a Flink Streaming Job.
