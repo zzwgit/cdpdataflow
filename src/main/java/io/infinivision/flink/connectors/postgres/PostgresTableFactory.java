@@ -4,6 +4,8 @@ import org.apache.flink.api.java.io.jdbc.JDBCAppendTableSink;
 import org.apache.flink.api.java.io.jdbc.JDBCInputFormat;
 import org.apache.flink.api.java.io.jdbc.JDBCOptions;
 import org.apache.flink.table.api.RichTableSchema;
+import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.factories.BatchTableSinkFactory;
 import org.apache.flink.table.factories.BatchTableSourceFactory;
@@ -15,12 +17,11 @@ import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.StreamTableSource;
 import org.apache.flink.table.util.TableProperties;
 import org.apache.flink.types.Row;
+import org.apache.flink.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static io.infinivision.flink.connectors.postgres.PostgresValidator.CONNECTOR_VERSION_VALUE_95;
 import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.*;
@@ -48,7 +49,51 @@ public class PostgresTableFactory implements
         TableProperties prop = new TableProperties();
         prop.putProperties(properties);
         RichTableSchema schema = prop.readSchemaFromProperties(Thread.currentThread().getContextClassLoader());
-        return new PostgresTableSource(schema);
+        String[] columnNames = schema.getColumnNames();
+        InternalType[] columnTypes = schema.getColumnTypes();
+        boolean[] nullables = schema.getNullables();
+
+        Preconditions.checkArgument(columnNames.length > 0 && columnTypes.length > 0 && nullables.length > 0,
+                "column numbers can not be 0");
+
+        Preconditions.checkArgument(columnNames.length == columnTypes.length,
+                "columnNames length must be equal to columnTypes length");
+
+        Preconditions.checkArgument(columnNames.length == nullables.length,
+                "columnNames length must be equal to nullable length");
+
+
+        PostgresTableSource.Builder builder = PostgresTableSource.builder()
+                .fields(columnNames, columnTypes, nullables);
+
+        Set<String> primaryKeys = new HashSet<>();
+        Set<Set<String>> uniqueKeys = new HashSet<>();
+        Set<Set<String>> normalIndexes = new HashSet<>();
+        if (!schema.getPrimaryKeys().isEmpty()) {
+//            uniqueKeys.add(new HashSet<>(schema.getPrimaryKeys()));
+            primaryKeys = new HashSet<>(schema.getPrimaryKeys());
+        }
+        for (List<String> uniqueKey : schema.getUniqueKeys()) {
+            uniqueKeys.add(new HashSet<>(uniqueKey));
+        }
+        for (RichTableSchema.Index index : schema.getIndexes()) {
+            if (index.unique) {
+                uniqueKeys.add(new HashSet<>(index.keyList));
+            } else {
+                normalIndexes.add(new HashSet<>(index.keyList));
+            }
+        }
+        if (!primaryKeys.isEmpty()) {
+            builder.setPrimaryKeys(primaryKeys);
+        }
+        if (!uniqueKeys.isEmpty()) {
+            builder.setUniqueKeys(uniqueKeys);
+        }
+        if (!normalIndexes.isEmpty()) {
+            builder.setNormalIndexes(normalIndexes);
+        }
+
+        return builder.build();
 
     }
 

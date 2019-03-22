@@ -1,6 +1,7 @@
 package io.infinivision.flink.connectors.postgres;
 
 import org.apache.flink.api.java.io.jdbc.JDBCInputFormat;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.RichTableSchema;
@@ -8,6 +9,7 @@ import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.api.functions.AsyncTableFunction;
 import org.apache.flink.table.api.functions.TableFunction;
 import org.apache.flink.table.api.types.DataType;
+import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.LookupConfig;
@@ -17,23 +19,21 @@ import org.apache.flink.table.util.TableProperties;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
+
 
 public class PostgresTableSource implements
         StreamTableSource<Row>,
         BatchTableSource<Row>,
         LookupableTableSource<Row> {
 
-    private JDBCInputFormat jdbcInputFormat;
     private RichTableSchema richTableSchema;
     private TableProperties tableProperties;
-
-    public PostgresTableSource(JDBCInputFormat inputFormat) {
-        jdbcInputFormat = inputFormat;
-    }
-
-    public PostgresTableSource(RichTableSchema richTableSchema) {
-        this.richTableSchema = richTableSchema;
-    }
+    private Set<String> primaryKeys;
+    private Set<Set<String>> uniqueKeys;
+    private Set<Set<String>> normalIndexes;
 
     public PostgresTableSource(TableProperties tableProperties) {
         this.tableProperties = tableProperties;
@@ -47,6 +47,8 @@ public class PostgresTableSource implements
 
     @Override
     public TableSchema getTableSchema() {
+        TableSchema.Builder builder = TableSchema.builder();
+
         return null;
     }
 
@@ -95,6 +97,66 @@ public class PostgresTableSource implements
 
     public String explainSource() {
         return "Postgres";
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private PostgresTableSource postgresTableSource;
+        private HashMap<String, Tuple2<InternalType, Boolean>> schema;
+        private Set<String> primaryKeys;
+        private Set<Set<String>> uniqueKeys;
+        private Set<Set<String>> normalIndexes;
+
+        public Set<String> getPrimaryKeys() {
+            return primaryKeys;
+        }
+
+        public void setPrimaryKeys(Set<String> primaryKeys) {
+            this.primaryKeys = primaryKeys;
+        }
+
+        public Set<Set<String>> getUniqueKeys() {
+            return uniqueKeys;
+        }
+
+        public void setUniqueKeys(Set<Set<String>> uniqueKeys) {
+            this.uniqueKeys = uniqueKeys;
+        }
+
+        public Set<Set<String>> getNormalIndexes() {
+            return normalIndexes;
+        }
+
+        public void setNormalIndexes(Set<Set<String>> normalIndexes) {
+            this.normalIndexes = normalIndexes;
+        }
+
+        private Builder field(String columnName,
+                              InternalType columnType,
+                              boolean nullable) {
+            if (schema.containsKey(columnName)) {
+                throw new IllegalArgumentException("duplicate column: " + columnName);
+            }
+
+            schema.put(columnName, new Tuple2<>(columnType, nullable));
+            return this;
+        }
+
+        public Builder fields(String[] columnNames,
+                              InternalType[] columnTypes,
+                              boolean[] nullables){
+            for (int index=0; index<columnNames.length; index++) {
+                field(columnNames[index], columnTypes[index], nullables[index]);
+            }
+            return this;
+        }
+
+        public PostgresTableSource build() {
+            return postgresTableSource;
+        }
     }
 
 }
