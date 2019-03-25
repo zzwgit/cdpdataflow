@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -213,10 +214,10 @@ public class PostgresTableSource implements
 
     public static class Builder {
         private PostgresTableSource postgresTableSource;
-        private HashMap<String, Tuple2<InternalType, Boolean>> schema;
-        private Set<String> primaryKeys;
-        private Set<Set<String>> uniqueKeys;
-        private Set<Set<String>> normalIndexes;
+        private HashMap<String, Tuple2<InternalType, Boolean>> schema = new HashMap<>();
+        private Set<String> primaryKeys = new HashSet<>();
+        private Set<Set<String>> uniqueKeys = new HashSet<>();
+        private Set<Set<String>> normalIndexes = new HashSet<>();
         TableProperties tableProperties;
 
         public Set<String> getPrimaryKeys() {
@@ -249,6 +250,11 @@ public class PostgresTableSource implements
 
         public void setTableProperties(TableProperties tableProperties) {
             this.tableProperties = tableProperties;
+        }
+
+        public Builder tableProperties(TableProperties tableProperties) {
+            this.tableProperties = tableProperties;
+            return this;
         }
 
         public Builder field(String columnName,
