@@ -1,10 +1,6 @@
 package io.infinivision.flink.connectors.postgres;
 
-import org.apache.flink.api.java.io.jdbc.JDBCAppendTableSink;
-import org.apache.flink.api.java.io.jdbc.JDBCInputFormat;
-import org.apache.flink.api.java.io.jdbc.JDBCOptions;
 import org.apache.flink.table.api.RichTableSchema;
-import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.factories.BatchTableSinkFactory;
@@ -48,7 +44,9 @@ public class PostgresTableFactory implements
         preCheck(properties);
         TableProperties prop = new TableProperties();
         prop.putProperties(properties);
-        RichTableSchema schema = prop.readSchemaFromProperties(Thread.currentThread().getContextClassLoader());
+        RichTableSchema schema = prop.readSchemaFromProperties(
+                Thread.currentThread().getContextClassLoader()
+        );
         String[] columnNames = schema.getColumnNames();
         InternalType[] columnTypes = schema.getColumnTypes();
         boolean[] nullables = schema.getNullables();
@@ -92,6 +90,8 @@ public class PostgresTableFactory implements
         if (!normalIndexes.isEmpty()) {
             builder.setNormalIndexes(normalIndexes);
         }
+
+        builder.setTableProperties(prop);
 
         return builder.build();
 
