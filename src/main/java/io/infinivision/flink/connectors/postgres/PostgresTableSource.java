@@ -1,5 +1,6 @@
 package io.infinivision.flink.connectors.postgres;
 
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.io.jdbc.JDBCInputFormat;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.RowTypeInfo;
@@ -12,6 +13,7 @@ import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.api.types.TypeConverters;
+import org.apache.flink.table.calcite.FlinkTypeFactory;
 import org.apache.flink.table.plan.stats.TableStats;
 import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.LookupConfig;
@@ -249,7 +251,30 @@ public class PostgresTableSource implements
             this.tableProperties = tableProperties;
         }
 
-        private Builder field(String columnName,
+        public Builder field(String columnName,
+                             TypeInformation columnType) {
+            if (schema.containsKey(columnName)) {
+                throw new IllegalArgumentException("duplicate column: " + columnName);
+            }
+
+            InternalType internalType = TypeConverters.createInternalTypeFromTypeInfo(columnType);
+            boolean nullable = !FlinkTypeFactory.isTimeIndicatorType(internalType);
+            schema.put(columnName, new Tuple2<>(internalType, nullable));
+            return this;
+        }
+
+        public Builder field(String columnName,
+                             InternalType columnType) {
+            if (schema.containsKey(columnName)) {
+                throw new IllegalArgumentException("duplicate column: " + columnName);
+            }
+
+            boolean nullable = !FlinkTypeFactory.isTimeIndicatorType(columnType);
+            schema.put(columnName, new Tuple2<>(columnType, nullable));
+            return this;
+        }
+
+        public Builder field(String columnName,
                               InternalType columnType,
                               boolean nullable) {
             if (schema.containsKey(columnName)) {
