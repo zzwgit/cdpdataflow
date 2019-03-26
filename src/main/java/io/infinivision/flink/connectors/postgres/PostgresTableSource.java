@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -214,7 +215,7 @@ public class PostgresTableSource implements
 
     public static class Builder {
         private PostgresTableSource postgresTableSource;
-        private HashMap<String, Tuple2<InternalType, Boolean>> schema = new HashMap<>();
+        private LinkedHashMap<String, Tuple2<InternalType, Boolean>> schema = new LinkedHashMap<>();
         private Set<String> primaryKeys = new HashSet<>();
         private Set<Set<String>> uniqueKeys = new HashSet<>();
         private Set<Set<String>> normalIndexes = new HashSet<>();
@@ -301,6 +302,10 @@ public class PostgresTableSource implements
         }
 
         public PostgresTableSource build() {
+            if (schema.isEmpty()) {
+                throw new IllegalArgumentException("Postgres Table source fields can't be empty");
+            }
+
             return new PostgresTableSource(
                     tableProperties,
                     schema.keySet().toArray(new String[0]),

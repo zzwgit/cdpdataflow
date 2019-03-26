@@ -68,7 +68,7 @@ public class PostgresTableFactory implements
         Set<Set<String>> uniqueKeys = new HashSet<>();
         Set<Set<String>> normalIndexes = new HashSet<>();
         if (!schema.getPrimaryKeys().isEmpty()) {
-//            uniqueKeys.add(new HashSet<>(schema.getPrimaryKeys()));
+            uniqueKeys.add(new HashSet<>(schema.getPrimaryKeys()));
             primaryKeys = new HashSet<>(schema.getPrimaryKeys());
         }
         for (List<String> uniqueKey : schema.getUniqueKeys()) {
