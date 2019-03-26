@@ -65,6 +65,22 @@ under the License.
 			<scope>provided</scope>
 		</dependency>
 
+		<!--flink client-->
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>flink-clients_${scala.binary.version}</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>flink-clients_${scala.binary.version}</artifactId>
+			<version>${flink.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+		</dependency>
+
 		<dependency>
 			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
@@ -109,16 +125,28 @@ under the License.
 			<version>${flink.version}</version>
 		</dependency>
 
-		<!-- Add connector dependencies here. They must be in the default scope (compile). -->
-
-		<!-- Example:
+		<!--SQL Client-->
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>flink-sql-client</artifactId>
+			<version>${flink.version}</version>
+			<type>test-jar</type>
+			<scope>test</scope>
+		</dependency>
 
 		<dependency>
 			<groupId>com.alibaba.blink</groupId>
-			<artifactId>flink-connector-kafka-0.10_${scala.binary.version}</artifactId>
+			<artifactId>flink-sql-client</artifactId>
 			<version>${flink.version}</version>
 		</dependency>
-		-->
+
+
+		<dependency>
+			<groupId>com.alibaba.blink</groupId>
+			<artifactId>flink-test-utils_${scala.binary.version}</artifactId>
+			<version>${flink.version}</version>
+			<scope>test</scope>
+		</dependency>
 
 
 		<!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->

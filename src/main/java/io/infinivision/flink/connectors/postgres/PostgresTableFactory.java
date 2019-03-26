@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-import static io.infinivision.flink.connectors.postgres.PostgresValidator.CONNECTOR_VERSION_VALUE_95;
+import static io.infinivision.flink.connectors.postgres.PostgresValidator.CONNECTOR_VERSION_VALUE_94;
 import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.*;
 
 public class PostgresTableFactory implements
@@ -32,7 +32,7 @@ public class PostgresTableFactory implements
     public static final String DRIVERNAME = "org.postgresql.Driver";
 
     String postgresVersion() {
-        return CONNECTOR_VERSION_VALUE_95;
+        return CONNECTOR_VERSION_VALUE_94;
     }
 
     String DriverName() {
@@ -129,9 +129,9 @@ public class PostgresTableFactory implements
     private void preCheck(Map<String, String> properties) {
         DescriptorProperties descriptorProperties = new DescriptorProperties();
         descriptorProperties.putProperties(properties);
-        descriptorProperties.validateString(properties.getOrDefault(PostgresOptions.USER_NAME.key(), ""), false, 1);
-        descriptorProperties.validateString(properties.getOrDefault(PostgresOptions.PASSWORD.key(), ""), false, 1);
-        descriptorProperties.validateString(properties.getOrDefault(PostgresOptions.DB_URL.key(), ""), false, 1);
-        descriptorProperties.validateString(properties.getOrDefault(PostgresOptions.TABLE_NAME.key(), ""), false, 1);
+        descriptorProperties.validateString(PostgresOptions.USER_NAME.key(), false, 1);
+        descriptorProperties.validateString(PostgresOptions.PASSWORD.key(), false, 1);
+        descriptorProperties.validateString(PostgresOptions.DB_URL.key(), false, 1);
+        descriptorProperties.validateString(PostgresOptions.TABLE_NAME.key(), false, 1);
     }
 }
