@@ -2,6 +2,7 @@ package io.infinivision.flink.connectors.postgres;
 
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.factories.BatchTableSinkFactory;
 import org.apache.flink.table.factories.BatchTableSourceFactory;
@@ -12,7 +13,6 @@ import org.apache.flink.table.sinks.StreamTableSink;
 import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.StreamTableSource;
 import org.apache.flink.table.util.TableProperties;
-import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,10 +23,10 @@ import static io.infinivision.flink.connectors.postgres.PostgresValidator.CONNEC
 import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.*;
 
 public class PostgresTableFactory implements
-        StreamTableSourceFactory<Row>,
-        StreamTableSinkFactory<Row>,
-        BatchTableSourceFactory<Row>,
-        BatchTableSinkFactory<Row> {
+        StreamTableSourceFactory<BaseRow>,
+        StreamTableSinkFactory<BaseRow>,
+        BatchTableSourceFactory<BaseRow>,
+        BatchTableSinkFactory<BaseRow> {
     private static final Logger LOG = LoggerFactory.getLogger(PostgresTableFactory.class);
 
     public static final String DRIVERNAME = "org.postgresql.Driver";
@@ -40,7 +40,7 @@ public class PostgresTableFactory implements
     }
 
     @Override
-    public StreamTableSource<Row> createStreamTableSource(Map<String, String> properties) {
+    public StreamTableSource<BaseRow> createStreamTableSource(Map<String, String> properties) {
         preCheck(properties);
         TableProperties prop = new TableProperties();
         prop.putProperties(properties);
@@ -98,17 +98,17 @@ public class PostgresTableFactory implements
     }
 
     @Override
-    public StreamTableSink<Row> createStreamTableSink(Map<String, String> properties) {
+    public StreamTableSink<BaseRow> createStreamTableSink(Map<String, String> properties) {
         return null;
     }
 
     @Override
-    public BatchTableSource<Row> createBatchTableSource(Map<String, String> properties) {
+    public BatchTableSource<BaseRow> createBatchTableSource(Map<String, String> properties) {
         throw new UnsupportedOperationException("Postgres table can not be convert to Batch Table Source currently.");
     }
 
     @Override
-    public BatchTableSink<Row> createBatchTableSink(Map<String, String> properties) {
+    public BatchTableSink<BaseRow> createBatchTableSink(Map<String, String> properties) {
         throw new UnsupportedOperationException("Postgres table can not be convert to Batch Table Sink currently.");
     }
 

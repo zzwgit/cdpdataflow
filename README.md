@@ -37,3 +37,26 @@ CREATE TABLE csv_adfeature (
   dburl = 'jdbc:postgresql://localhost:5432/postgres'
 );
 ```
+
+* Temporal Table Join
+```sql
+// create probe side table
+create table train (
+  aid VARCHAR NOT NULL,
+  uid VARCHAR NOT NULL,
+  label VARCHAR NOT NULL
+) with (
+  type = 'csv',
+  firstLineAsHeader='true',
+  path = 'file:///bigdata/datasets/train10.csv'
+);
+
+
+// temporal table join
+SELECT
+p.aid, p.uid, b.advertiser_id
+FROM train AS p
+INNER JOIN
+adfeature FOR SYSTEM_TIME AS OF PROCTIME() AS b
+ON p.aid = b.aid;
+```

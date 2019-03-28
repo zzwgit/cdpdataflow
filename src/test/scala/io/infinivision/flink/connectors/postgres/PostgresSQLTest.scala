@@ -129,6 +129,43 @@ class PostgresSQLTest extends SQLClientITCase {
   }
 
   @Test
+  def testcsvBigFileSQLQuery(): Unit = {
+    val clusterClient = SQLClientITCase.miniClusterResource.getClusterClient
+    val executor = createDefaultExecutor(clusterClient)
+    val session = new SessionContext("test-session", new Environment)
+    val ddl =
+      """
+        |CREATE TABLE adfeature (
+        |  aid VARCHAR NOT NULL,
+        |  uid VARCHAR NOT NULL,
+        |  label VARCHAR NOT NULL
+        |) WITH (
+        |  type = 'csv',
+        |  firstLineAsHeader='true',
+        |  path = 'file:///Users/hongtaozhang/Downloads/train.csv'
+        |);
+      """.stripMargin
+    executor.createTable(session, ddl)
+
+    val sql =
+      """
+        | SELECT
+        |   aid, uid, label
+        | FROM adfeature
+      """.stripMargin
+
+    val resultDesc = executor.executeQuery(session, sql)
+
+    val result = retriveChangeLogResult(
+      executor,
+      session,
+      resultDesc.getResultId
+    )
+
+    println(result.size)
+  }
+
+  @Test
   def testTemporalTableJoin(): Unit = {
     val clusterClient = SQLClientITCase.miniClusterResource.getClusterClient
     val executor = createDefaultExecutor(clusterClient)
@@ -168,7 +205,7 @@ class PostgresSQLTest extends SQLClientITCase {
         |) with (
         |  type = 'csv',
         |  firstLineAsHeader='true',
-        |  path = 'file:///Users/hongtaozhang/Documents/train10.csv'
+        |  path = 'file:///Users/hongtaozhang/Downloads/train10.csv'
         |);
       """.stripMargin
 

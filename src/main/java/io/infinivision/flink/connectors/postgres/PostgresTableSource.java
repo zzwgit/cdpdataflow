@@ -1,9 +1,8 @@
 package io.infinivision.flink.connectors.postgres;
 
+import io.infinivision.flink.connectors.jdbc.BaseRowJDBCInputFormat;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.java.io.jdbc.JDBCInputFormat;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.typeutils.RowTypeInfo;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.TableSchema;
@@ -14,18 +13,15 @@ import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.api.types.RowType;
 import org.apache.flink.table.api.types.TypeConverters;
 import org.apache.flink.table.calcite.FlinkTypeFactory;
+import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.plan.stats.TableStats;
-import org.apache.flink.table.sources.BatchTableSource;
-import org.apache.flink.table.sources.LookupConfig;
-import org.apache.flink.table.sources.LookupableTableSource;
-import org.apache.flink.table.sources.StreamTableSource;
+import org.apache.flink.table.sources.*;
+import org.apache.flink.table.typeutils.BaseRowTypeInfo;
 import org.apache.flink.table.util.TableProperties;
-import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Set;
@@ -33,9 +29,9 @@ import java.util.stream.Collectors;
 
 
 public class PostgresTableSource implements
-        StreamTableSource<Row>,
-        BatchTableSource<Row>,
-        LookupableTableSource<Row> {
+        StreamTableSource<BaseRow>,
+        BatchTableSource<BaseRow>,
+        LookupableTableSource<BaseRow> {
     private static final Logger LOG = LoggerFactory.getLogger(PostgresTableSource.class);
     public static final String DRIVERNAME = "org.postgresql.Driver";
 
@@ -49,7 +45,7 @@ public class PostgresTableSource implements
     private String[][] normalIndexes;
 
     private RowType returnType;
-    private RowTypeInfo returnTypeInfo;
+    private BaseRowTypeInfo returnTypeInfo;
 
     public PostgresTableSource(
             TableProperties tableProperties,
@@ -69,11 +65,11 @@ public class PostgresTableSource implements
 
         // return type
         this.returnType = new RowType(columnTypes, columnNames);
-        this.returnTypeInfo = (RowTypeInfo) TypeConverters.createExternalTypeInfoFromDataType(returnType);
+        this.returnTypeInfo = TypeConverters.toBaseRowTypeInfo(returnType);
     }
 
 
-    private JDBCInputFormat createInputFormat() {
+    private BaseRowJDBCInputFormat createInputFormat() {
         // build the JDBCInputFormat
         String userName = tableProperties.getString(PostgresOptions.USER_NAME);
         String tableName = tableProperties.getString(PostgresOptions.TABLE_NAME);
@@ -91,7 +87,7 @@ public class PostgresTableSource implements
 
         LOG.debug(String.format("SELECT %s FROM %s", fields, tableName));
 
-        return JDBCInputFormat.buildJDBCInputFormat()
+        return BaseRowJDBCInputFormat.buildBaseRowJDBCInputFormat()
                 .setUsername(userName)
                 .setPassword(password)
                 .setDrivername(DRIVERNAME)
@@ -102,7 +98,7 @@ public class PostgresTableSource implements
     }
 
     @Override
-    public DataStream<Row> getDataStream(StreamExecutionEnvironment execEnv) {
+    public DataStream<BaseRow> getDataStream(StreamExecutionEnvironment execEnv) {
         return execEnv.createInput(createInputFormat(), returnTypeInfo);
     }
 
@@ -132,17 +128,15 @@ public class PostgresTableSource implements
     }
 
     @Override
-    public DataStream<Row> getBoundedStream(StreamExecutionEnvironment streamEnv) {
+    public DataStream<BaseRow> getBoundedStream(StreamExecutionEnvironment streamEnv) {
         return null;
     }
 
     @Override
-    public TableFunction<Row> getLookupFunction(int[] lookupKeys) {
-        Preconditions.checkArgument(null != lookupKeys && lookupKeys.length >= 1,
-                "Lookup keys should be greater than 1");
-
-        Preconditions.checkArgument(lookupKeys.length < columnNames.length,
-                "Lookup Keys number should be less than the len of schema fields");
+    public TableFunction<BaseRow> getLookupFunction(int[] lookupKeys) {
+        if (lookupKeys.length == 0) {
+            return null;
+        }
 
         String[] lookupKeyString = new String[lookupKeys.length];
         for (int index=0; index<lookupKeys.length; index++) {
@@ -179,19 +173,19 @@ public class PostgresTableSource implements
 
         LOG.debug(String.format("SELECT %s FROM %s WHERE %s", fields, tableName, question));
 
-        JDBCInputFormat inputFormat = JDBCInputFormat.buildJDBCInputFormat()
+        BaseRowJDBCInputFormat inputFormat = BaseRowJDBCInputFormat.buildBaseRowJDBCInputFormat()
                 .setUsername(userName)
                 .setPassword(password)
                 .setDrivername(DRIVERNAME)
                 .setDBUrl(dbURL)
                 .setQuery(String.format("SELECT %s FROM %s WHERE %s", fields, tableName, question))
-                .setRowTypeInfo(returnTypeInfo)
+                .setRowTypeInfo(TypeConverters.toBaseRowTypeInfo(returnType))
                 .finish();
         return new PostgresLookupFunction(inputFormat, returnType);
     }
 
     @Override
-    public AsyncTableFunction<Row> getAsyncLookupFunction(int[] lookupKeys) {
+    public AsyncTableFunction<BaseRow> getAsyncLookupFunction(int[] lookupKeys) {
         return null;
     }
 
