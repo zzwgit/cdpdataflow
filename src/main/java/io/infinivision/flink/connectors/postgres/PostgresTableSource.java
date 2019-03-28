@@ -69,14 +69,25 @@ public class PostgresTableSource implements
     }
 
 
-    private BaseRowJDBCInputFormat createInputFormat() {
+    private BaseRowJDBCInputFormat createInputFormat(String queryTemplate) {
         // build the JDBCInputFormat
         String userName = tableProperties.getString(PostgresOptions.USER_NAME);
-        String tableName = tableProperties.getString(PostgresOptions.TABLE_NAME);
         String password = tableProperties.getString(PostgresOptions.PASSWORD);
         String dbURL = tableProperties.getString(PostgresOptions.DB_URL);
 
-        // build the JDBCInputFormat according to richTableSchema
+        return BaseRowJDBCInputFormat.buildBaseRowJDBCInputFormat()
+                .setUsername(userName)
+                .setPassword(password)
+                .setDrivername(DRIVERNAME)
+                .setDBUrl(dbURL)
+                .setQuery(queryTemplate)
+                .setRowTypeInfo(returnTypeInfo)
+                .finish();
+    }
+
+    @Override
+    public DataStream<BaseRow> getDataStream(StreamExecutionEnvironment execEnv) {
+        // build query template
         StringBuilder fields = new StringBuilder();
         for (int i = 0; i < columnNames.length; i++) {
             if (i != 0) {
@@ -85,21 +96,10 @@ public class PostgresTableSource implements
             fields.append(columnNames[i]);
         }
 
-        LOG.debug(String.format("SELECT %s FROM %s", fields, tableName));
+        String tableName = tableProperties.getString(PostgresOptions.TABLE_NAME);
 
-        return BaseRowJDBCInputFormat.buildBaseRowJDBCInputFormat()
-                .setUsername(userName)
-                .setPassword(password)
-                .setDrivername(DRIVERNAME)
-                .setDBUrl(dbURL)
-                .setQuery(String.format("SELECT %s FROM %s", fields, tableName))
-                .setRowTypeInfo(returnTypeInfo)
-                .finish();
-    }
-
-    @Override
-    public DataStream<BaseRow> getDataStream(StreamExecutionEnvironment execEnv) {
-        return execEnv.createInput(createInputFormat(), returnTypeInfo);
+        String queryTemplate = String.format("SELECT %s FROM %s", fields, tableName);
+        return execEnv.createInput(createInputFormat(queryTemplate), returnTypeInfo);
     }
 
     @Override
@@ -132,8 +132,7 @@ public class PostgresTableSource implements
         return null;
     }
 
-    @Override
-    public TableFunction<BaseRow> getLookupFunction(int[] lookupKeys) {
+    private String buildLookupQueryTemplate(int[] lookupKeys) {
         if (lookupKeys.length == 0) {
             return null;
         }
@@ -146,10 +145,7 @@ public class PostgresTableSource implements
         }
 
         // build the JDBCInputFormat
-        String userName = tableProperties.getString(PostgresOptions.USER_NAME);
         String tableName = tableProperties.getString(PostgresOptions.TABLE_NAME);
-        String password = tableProperties.getString(PostgresOptions.PASSWORD);
-        String dbURL = tableProperties.getString(PostgresOptions.DB_URL);
 
         // build the JDBCInputFormat according to richTableSchema
         StringBuilder fields = new StringBuilder();
@@ -171,27 +167,28 @@ public class PostgresTableSource implements
 
         }
 
-        LOG.debug(String.format("SELECT %s FROM %s WHERE %s", fields, tableName, question));
+        return String.format("SELECT %s FROM %s WHERE %s", fields, tableName, question);
+    }
 
-        BaseRowJDBCInputFormat inputFormat = BaseRowJDBCInputFormat.buildBaseRowJDBCInputFormat()
-                .setUsername(userName)
-                .setPassword(password)
-                .setDrivername(DRIVERNAME)
-                .setDBUrl(dbURL)
-                .setQuery(String.format("SELECT %s FROM %s WHERE %s", fields, tableName, question))
-                .setRowTypeInfo(TypeConverters.toBaseRowTypeInfo(returnType))
-                .finish();
-        return new PostgresLookupFunction(inputFormat, returnType);
+    @Override
+    public TableFunction<BaseRow> getLookupFunction(int[] lookupKeys) {
+        String queryTemplate = buildLookupQueryTemplate(lookupKeys);
+        return new PostgresLookupFunction(createInputFormat(queryTemplate), returnType);
     }
 
     @Override
     public AsyncTableFunction<BaseRow> getAsyncLookupFunction(int[] lookupKeys) {
-        return null;
+        String queryTemplate = buildLookupQueryTemplate(lookupKeys);
+        return new PostgresAsyncLookupFunction(createInputFormat(queryTemplate), returnType);
     }
 
     @Override
     public LookupConfig getLookupConfig() {
-        return new LookupConfig();
+        LookupConfig config = new LookupConfig();
+        config.setAsyncEnabled(true);
+        config.setAsyncTimeoutMs(10000);
+        config.setAsyncOutputMode(LookupConfig.AsyncOutputMode.ORDERED);
+        return config;
     }
 
     @Override

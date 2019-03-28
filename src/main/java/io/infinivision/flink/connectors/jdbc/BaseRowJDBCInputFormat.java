@@ -147,7 +147,6 @@ public class BaseRowJDBCInputFormat extends RichInputFormat<BaseRow, InputSplit>
                 return null;
             }
             for (int pos = 0; pos < reuseRow.getArity(); pos++) {
-
                 reuseRow.update(pos, resultSet.getObject(pos + 1));
             }
             //update hasNext after we've read the record

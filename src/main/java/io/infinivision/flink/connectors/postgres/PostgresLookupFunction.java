@@ -15,7 +15,7 @@ import java.io.IOException;
 public class PostgresLookupFunction extends TableFunction<BaseRow> {
     private static final Logger LOG = LoggerFactory.getLogger(PostgresLookupFunction.class);
 
-    private BaseRowJDBCInputFormat inputFormat;
+    private final BaseRowJDBCInputFormat inputFormat;
     private final RowType returnType;
 
     public PostgresLookupFunction(BaseRowJDBCInputFormat inputFormat, RowType returnType) {
