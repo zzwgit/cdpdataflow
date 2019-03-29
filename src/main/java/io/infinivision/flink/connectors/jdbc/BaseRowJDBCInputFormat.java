@@ -81,6 +81,58 @@ public class BaseRowJDBCInputFormat extends RichInputFormat<BaseRow, InputSplit>
         }
     }
 
+    public PreparedStatement setStatementParamter(PreparedStatement preparedStatement, int index, Object param) throws SQLException {
+        if (param instanceof String) {
+            preparedStatement.setString(index + 1, (String) param);
+        } else if (param instanceof BinaryString) {
+            BinaryString bs = (BinaryString)param;
+            preparedStatement.setString(index + 1, bs.toString());
+        } else if (param instanceof Long) {
+            preparedStatement.setLong(index + 1, (Long) param);
+        } else if (param instanceof Integer) {
+            preparedStatement.setInt(index + 1, (Integer) param);
+        } else if (param instanceof Double) {
+            preparedStatement.setDouble(index + 1, (Double) param);
+        } else if (param instanceof Boolean) {
+            preparedStatement.setBoolean(index + 1, (Boolean) param);
+        } else if (param instanceof Float) {
+            preparedStatement.setFloat(index + 1, (Float) param);
+        } else if (param instanceof BigDecimal) {
+            preparedStatement.setBigDecimal(index + 1, (BigDecimal) param);
+        } else if (param instanceof Byte) {
+            preparedStatement.setByte(index + 1, (Byte) param);
+        } else if (param instanceof Short) {
+            preparedStatement.setShort(index + 1, (Short) param);
+        } else if (param instanceof Date) {
+            preparedStatement.setDate(index + 1, (Date) param);
+        } else if (param instanceof Time) {
+            preparedStatement.setTime(index + 1, (Time) param);
+        } else if (param instanceof Timestamp) {
+            preparedStatement.setTimestamp(index + 1, (Timestamp) param);
+        } else if (param instanceof Array) {
+            preparedStatement.setArray(index + 1, (Array) param);
+        } else {
+            //extends with other types if needed
+            throw new IllegalArgumentException("open() failed. Parameter " + index + " of type " + param.getClass() + " is not handled (yet).");
+        }
+
+        return preparedStatement;
+    }
+
+    public ResultSet executeQuery(Object[] parameters) throws SQLException{
+        PreparedStatement preparedStatement = dbConn.prepareStatement(queryTemplate, resultSetType, resultSetConcurrency);
+        if (fetchSize == Integer.MIN_VALUE || fetchSize > 0) {
+            preparedStatement.setFetchSize(fetchSize);
+        }
+        for(int index = 0; index < parameters.length; index++) {
+            Object param = parameters[index];
+            preparedStatement = setStatementParamter(preparedStatement, index, param);
+        }
+
+        return preparedStatement.executeQuery();
+    }
+
+
     @Override
     public void open(InputSplit inputSplit) throws IOException {
         try {

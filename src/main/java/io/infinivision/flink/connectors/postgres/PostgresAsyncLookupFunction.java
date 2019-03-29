@@ -12,14 +12,14 @@ import org.apache.flink.table.dataformat.GenericRow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Supplier;
+
 
 public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
     private static final Logger LOG = LoggerFactory.getLogger(PostgresAsyncLookupFunction.class);
@@ -42,32 +42,42 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
         executor = Executors.newCachedThreadPool();
     }
 
-    public void eval(final ResultFuture<BaseRow> asyncCollector, Object... values) throws IOException {
-        Object[][] queryParameters = new Object[][]{values};
-        inputFormat.setParameterValues(queryParameters);
-        inputFormat.open(inputSplit);
-        BaseRow reused = new GenericRow(returnType.getArity());
-        CompletableFuture.runAsync(() -> {
-            while (true) {
-                try {
-                    GenericRow result = (GenericRow) inputFormat.nextRecord(reused);
-                    if (null == result) {
-                        break;
+    public void eval(final ResultFuture<BaseRow> asyncCollector, Object... values) {
+        CompletableFuture
+                .supplyAsync(() -> {
+                    ResultSet rs;
+                    try {
+                        rs = inputFormat.executeQuery(values);
+                    } catch (SQLException ex) {
+                        throw new CompletionException(ex);
                     }
-                    asyncCollector.complete(Collections.singleton(result));
-                } catch (Exception ex) {
-                    asyncCollector.completeExceptionally(ex);
-                }
-            }
-        }, executor);
+                    return rs;
+                }, executor)
+                .thenAccept((resultSet) -> {
+                    if (null == resultSet) {
+                        return;
+                    }
+                    boolean hasNext;
+                    GenericRow reuseRow = new GenericRow(returnType.getArity());
+                    try {
+                        hasNext = resultSet.next();
+                        while (hasNext) {
+                            for (int pos = 0; pos < reuseRow.getArity(); pos++) {
+                                reuseRow.update(pos, resultSet.getObject(pos + 1));
+                            }
+                            asyncCollector.complete(Collections.singleton(reuseRow));
+                            hasNext = resultSet.next();
+                        }
+                    } catch (SQLException ex) {
+                        throw new CompletionException( ex);
+                    }
+                });
     }
 
     @Override
     public DataType getResultType(Object[] arguments, Class[] argTypes) {
         return this.returnType;
     }
-
-
 
     @Override
     public void close() throws Exception {

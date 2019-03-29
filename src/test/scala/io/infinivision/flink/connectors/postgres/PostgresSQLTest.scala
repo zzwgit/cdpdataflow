@@ -205,7 +205,7 @@ class PostgresSQLTest extends SQLClientITCase {
         |) with (
         |  type = 'csv',
         |  firstLineAsHeader='true',
-        |  path = 'file:///Users/hongtaozhang/Downloads/train10.csv'
+        |  path = 'file:///Users/hongtaozhang/Downloads/train100w.csv'
         |);
       """.stripMargin
 
@@ -229,6 +229,8 @@ class PostgresSQLTest extends SQLClientITCase {
       resultDesc.getResultId
     )
 
+//    println(result)
+//    log.info(s"${result.size}")
     println(result.size)
   }
 

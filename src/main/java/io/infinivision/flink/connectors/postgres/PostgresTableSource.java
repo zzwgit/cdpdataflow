@@ -186,7 +186,7 @@ public class PostgresTableSource implements
     public LookupConfig getLookupConfig() {
         LookupConfig config = new LookupConfig();
         config.setAsyncEnabled(true);
-        config.setAsyncTimeoutMs(10000);
+        config.setAsyncTimeoutMs(100000);
         config.setAsyncOutputMode(LookupConfig.AsyncOutputMode.ORDERED);
         return config;
     }
