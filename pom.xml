@@ -39,6 +39,7 @@ under the License.
 		<scala.binary.version>2.11</scala.binary.version>
 		<postgres.connector.version>9.4.1212</postgres.connector.version>
 		<junit.version>4.12</junit.version>
+		<vertx.version>3.5.2</vertx.version>
 	</properties>
 
 	<repositories>
@@ -138,6 +139,7 @@ under the License.
 			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-sql-client</artifactId>
 			<version>${flink.version}</version>
+			<scope>provided</scope>
 		</dependency>
 
 
@@ -156,6 +158,18 @@ under the License.
 			<version>${postgres.connector.version}</version>
 		</dependency>
 
+		<!--异步数据库连接-->
+		<dependency>
+			<groupId>io.vertx</groupId>
+			<artifactId>vertx-jdbc-client</artifactId>
+			<version>${vertx.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.vertx</groupId>
+			<artifactId>vertx-core</artifactId>
+			<version>${vertx.version}</version>
+		</dependency>
 
 		<!-- Add logging framework, to produce console output when running in the IDE. -->
 		<!-- These dependencies are excluded from the application JAR by default. -->

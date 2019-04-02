@@ -179,14 +179,15 @@ public class PostgresTableSource implements
     @Override
     public AsyncTableFunction<BaseRow> getAsyncLookupFunction(int[] lookupKeys) {
         String queryTemplate = buildLookupQueryTemplate(lookupKeys);
-        return new PostgresAsyncLookupFunction(createInputFormat(queryTemplate), returnType);
+        return new PostgresAsyncLookupFunction(tableProperties, queryTemplate, returnType);
     }
 
     @Override
     public LookupConfig getLookupConfig() {
         LookupConfig config = new LookupConfig();
         config.setAsyncEnabled(true);
-        config.setAsyncTimeoutMs(100000);
+        config.setAsyncTimeoutMs(10000);
+//        config.setAsyncBufferCapacity(10000);
         config.setAsyncOutputMode(LookupConfig.AsyncOutputMode.ORDERED);
         return config;
     }
