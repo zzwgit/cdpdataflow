@@ -31,7 +31,7 @@ under the License.
 
 	<properties>
 		<postgres.connector.version>9.4.1212</postgres.connector.version>
-		<vertx.version>3.5.2</vertx.version>
+		<vertx.version>3.5.4</vertx.version>
 	</properties>
 
 	<dependencies>
