@@ -1,10 +1,7 @@
 package io.infinivision.flink.connectors.examples
 
-
-class PostgresSQLExercise {
-
-}
-
 object PostgresSQLExercise {
-
+  def main(args: Array[String]): Unit = {
+    val tableSource = TableExerciseUtils.createPostgresTableSource()
+  }
 }
