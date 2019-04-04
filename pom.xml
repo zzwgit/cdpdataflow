@@ -26,11 +26,13 @@ under the License.
 
     <modules>
         <module>connectors</module>
+        <module>dispatcher</module>
+        <module>dispatcher-ui</module>
     </modules>
 
     <packaging>pom</packaging>
 
-    <name>Flink Quickstart Job</name>
+    <name>ruleengine</name>
     <url>http://www.myorganization.org</url>
 
     <properties>
