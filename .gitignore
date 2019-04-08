@@ -1,5 +1,5 @@
 .idea
-ruleengine.iml
+*.iml
 target
 dependency-reduced-pom.xml
 connectors/connectors.iml
