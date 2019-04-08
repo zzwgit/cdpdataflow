@@ -171,6 +171,14 @@ public class PostgresTableSource implements
         return String.format("SELECT %s FROM %s WHERE %s", fields, tableName, question);
     }
 
+    /**
+     * config the table properties
+     * @param tableProperties The table properties
+     */
+    public void configuration(TableProperties tableProperties) {
+        this.tableProperties = tableProperties;
+    }
+
     @Override
     public TableFunction<BaseRow> getLookupFunction(int[] lookupKeys) {
         // validate lookup config
@@ -204,8 +212,6 @@ public class PostgresTableSource implements
             String capacity = tableProperties.getString(JDBCTableOptions.BUFFER_CAPACITY, "100");
             config.setAsyncBufferCapacity(Integer.valueOf(capacity));
             config.setAsyncOutputMode(LookupConfig.AsyncOutputMode.ORDERED);
-            LOG.info("==> async mode: timeout: " + timeout + " capacity: " + capacity);
-            System.out.println("==> async mode: timeout: " + timeout + " capacity: " + capacity);
         }
 
         // TODO cache stuff

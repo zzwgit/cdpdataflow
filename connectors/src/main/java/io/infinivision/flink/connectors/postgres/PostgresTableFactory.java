@@ -5,7 +5,6 @@ import org.apache.flink.api.java.io.jdbc.JDBCOptions;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
-import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.factories.BatchTableSinkFactory;
 import org.apache.flink.table.factories.BatchTableSourceFactory;
 import org.apache.flink.table.factories.StreamTableSinkFactory;

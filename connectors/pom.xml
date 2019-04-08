@@ -35,49 +35,12 @@ under the License.
 	</properties>
 
 	<dependencies>
-		<!-- Apache Flink dependencies -->
-		<!-- These dependencies are provided, because they should not be packaged into the JAR file. -->
-
-		<dependency>
-			<groupId>com.alibaba.blink</groupId>
-			<artifactId>flink-clients_${scala.binary.version}</artifactId>
-			<version>${flink.version}</version>
-			<type>test-jar</type>
-			<scope>test</scope>
-		</dependency>
-
-		<!--add flink table test jar for unit testing-->
-		<dependency>
-			<groupId>com.alibaba.blink</groupId>
-			<artifactId>flink-table_${scala.binary.version}</artifactId>
-			<version>${flink.version}</version>
-			<type>test-jar</type>
-			<scope>test</scope>
-		</dependency>
 
 		<dependency>
 			<groupId>com.alibaba.blink</groupId>
 			<artifactId>flink-jdbc</artifactId>
 			<version>${flink.version}</version>
 		</dependency>
-
-		<!--SQL Client-->
-		<dependency>
-			<groupId>com.alibaba.blink</groupId>
-			<artifactId>flink-sql-client</artifactId>
-			<version>${flink.version}</version>
-			<type>test-jar</type>
-			<scope>test</scope>
-		</dependency>
-
-
-		<dependency>
-			<groupId>com.alibaba.blink</groupId>
-			<artifactId>flink-test-utils_${scala.binary.version}</artifactId>
-			<version>${flink.version}</version>
-			<scope>test</scope>
-		</dependency>
-
 
 		<!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
 		<dependency>
