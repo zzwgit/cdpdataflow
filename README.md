@@ -25,8 +25,13 @@ CREATE TABLE tableName(
 ) WITH (
   propertyName=propertyValue,
   propertyName=propertyValue,
+  PRIMARY KEY(columnName)
+  [UNIQUE] INDEX(columnName,...)
   ...
 )
+
+NOTE: 维表至少需要一个index在on条件中
+
 ```
 
 ### Properties description
