@@ -1,6 +1,9 @@
 package io.infinivision.flink.entity;
 
+import org.apache.commons.math3.util.MathUtils;
 import org.apache.flink.streaming.api.CheckpointingMode;
+
+import java.math.BigDecimal;
 
 public class CheckPointEntity {
 
@@ -16,13 +19,15 @@ public class CheckPointEntity {
     }
 
     public CheckPointEntity(Long intervalTime, String mode, String stateBackend, String checkpointDataUri) {
-        this.intervalTime = intervalTime;
-        this.minPauseBetweenCheckpoints = null != intervalTime && intervalTime > 0 ? intervalTime / 10 : 0;
-        this.checkpointTimeout = null != intervalTime && intervalTime > 0 ? intervalTime / 10 : 0;
-        this.mode = mode;
-        this.enableExternalizedCheckpoint = intervalTime > 0;
-        this.stateBackend = stateBackend;
-        this.checkpointDataUri = checkpointDataUri;
+        if(null!=intervalTime&&intervalTime.longValue()>0){
+            this.intervalTime = intervalTime;
+            this.minPauseBetweenCheckpoints = null != intervalTime && intervalTime > 0 ? intervalTime / 10 : 0;
+            this.checkpointTimeout = null != intervalTime && intervalTime > 0 ? intervalTime / 10 : 0;
+            this.mode = mode;
+            this.enableExternalizedCheckpoint = intervalTime > 0;
+            this.stateBackend = stateBackend;
+            this.checkpointDataUri = checkpointDataUri;
+        }
     }
 
     public Long getIntervalTime() {

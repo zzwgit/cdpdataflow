@@ -30,7 +30,7 @@ public class CallSSh {
             sb.append("-d /bigdata/flink-1.5.1/conf/sql-client-defaults.yaml ");
             sb.append("-l /bigdata/flink-1.5.1/opt ");
             sb.append("-l /bigdata/flink-1.5.1/opt/connectors ");
-            sb.append("-sqlPath /opt/apps/zf/blink-sql/test_join_pg_s.sql ");
+            sb.append("-sqlPath /opt/apps/zf/blink-sql/01_cep.sql ");
 
             Session shellSession = SSHUtils.getJSchSession(host);
 //            stdout = SSHUtils.execCommandByJSch(shellSession, "cd /opt/apps/zf/blink-sql");

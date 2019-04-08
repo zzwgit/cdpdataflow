@@ -64,6 +64,7 @@ public class EnvHandler {
                     break;
                 case "filesystem":
                     env.setStateBackend(new FsStateBackend(checkpointDataUri, true));
+//                    env.setStateBackend(new FsStateBackend("hdfs://namenode:40010/flink/checkpoints"));
                     break;
                 default:
                     throw new IllegalArgumentException("stateBackend can only be RocksDB or Fs.");
