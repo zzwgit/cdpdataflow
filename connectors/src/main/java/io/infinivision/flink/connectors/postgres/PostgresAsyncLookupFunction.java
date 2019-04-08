@@ -28,7 +28,7 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
     private final TableProperties tableProperties;
     private final RowType returnType;
     private final String queryTemplate;
-
+    private Vertx vertx;
     private transient SQLClient SQLClient;
 
     private final static int DEFAULT_VERTX_EVENT_LOOP_POOL_SIZE = 1;
@@ -58,7 +58,7 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
         VertxOptions vo = new VertxOptions();
         vo.setEventLoopPoolSize(DEFAULT_VERTX_EVENT_LOOP_POOL_SIZE);
         vo.setWorkerPoolSize(DEFAULT_VERTX_WORKER_POOL_SIZE);
-        Vertx vertx = Vertx.vertx(vo);
+        this.vertx = Vertx.vertx(vo);
         this.SQLClient = JDBCClient.createNonShared(vertx, pgConfig);
     }
 
@@ -123,6 +123,14 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
         super.close();
         if (SQLClient != null) {
             SQLClient.close(done -> {
+                if (done.failed()) {
+                    throw new RuntimeException(done.cause());
+                }
+            });
+        }
+
+        if (vertx != null) {
+            vertx.close(done -> {
                 if (done.failed()) {
                     throw new RuntimeException(done.cause());
                 }
