@@ -7,6 +7,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.SQLClient;
 import io.vertx.ext.sql.SQLConnection;
+import org.apache.flink.api.java.io.jdbc.JDBCOptions;
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
 import org.apache.flink.table.api.functions.AsyncTableFunction;
 import org.apache.flink.table.api.functions.FunctionContext;
@@ -30,11 +31,11 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
 
     private transient SQLClient SQLClient;
 
-    public final static int DEFAULT_VERTX_EVENT_LOOP_POOL_SIZE = 1;
+    private final static int DEFAULT_VERTX_EVENT_LOOP_POOL_SIZE = 1;
 
-    public final static int DEFAULT_VERTX_WORKER_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
+    private final static int DEFAULT_VERTX_WORKER_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
 
-    public final static int DEFAULT_MAX_DB_CONN_POOL_SIZE = DEFAULT_VERTX_EVENT_LOOP_POOL_SIZE + DEFAULT_VERTX_WORKER_POOL_SIZE;
+    private final static int DEFAULT_MAX_DB_CONN_POOL_SIZE = DEFAULT_VERTX_EVENT_LOOP_POOL_SIZE + DEFAULT_VERTX_WORKER_POOL_SIZE;
 
     public PostgresAsyncLookupFunction(TableProperties tableProperties,
                                        String queryTemplate,
@@ -48,9 +49,9 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
     public void open(FunctionContext context) throws Exception {
         super.open(context);
         JsonObject pgConfig = new JsonObject();
-        pgConfig.put("url", tableProperties.getString(PostgresOptions.DB_URL))
-                .put("user", tableProperties.getString(PostgresOptions.USER_NAME))
-                .put("password", tableProperties.getString(PostgresOptions.PASSWORD))
+        pgConfig.put("url", tableProperties.getString(JDBCOptions.DB_URL))
+                .put("user", tableProperties.getString(JDBCOptions.USER_NAME))
+                .put("password", tableProperties.getString(JDBCOptions.PASSWORD))
                 .put("driver_class", "org.postgresql.Driver")
                 .put("max_pool_size", DEFAULT_MAX_DB_CONN_POOL_SIZE);
 

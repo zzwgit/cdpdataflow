@@ -62,6 +62,7 @@ class PostgresSQLTest extends SQLClientITCase {
         |  username = 'postgres',
         |  password = '123456',
         |  tablename = 'adfeature',
+        |  mode = 'async',
         |  dburl = 'jdbc:postgresql://localhost:5432/postgres'
         |);
       """.stripMargin
@@ -190,6 +191,10 @@ class PostgresSQLTest extends SQLClientITCase {
         |  username = 'postgres',
         |  password = '123456',
         |  tablename = 'adfeature',
+        |  mode = 'async',
+        |  asynctimeout = '10000',
+        |  cache = 'LRU',
+        |  cacheTTLms = '3600000',
         |  dburl = 'jdbc:postgresql://localhost:5432/postgres'
         |);
       """.stripMargin
@@ -205,7 +210,7 @@ class PostgresSQLTest extends SQLClientITCase {
         |) with (
         |  type = 'csv',
         |  firstLineAsHeader='true',
-        |  path = 'file:///Users/hongtaozhang/Downloads/train10w.csv'
+        |  path = 'file:///Users/hongtaozhang/Downloads/train10.csv'
         |);
       """.stripMargin
 

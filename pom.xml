@@ -274,6 +274,49 @@ under the License.
                     <version>${flink.version}</version>
                     <scope>compile</scope>
                 </dependency>
+                <!--flink client-->
+                <dependency>
+                    <groupId>com.alibaba.blink</groupId>
+                    <artifactId>flink-clients_${scala.binary.version}</artifactId>
+                    <version>${flink.version}</version>
+                    <scope>compile</scope>
+                </dependency>
+
+                <dependency>
+                    <groupId>com.alibaba.blink</groupId>
+                    <artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
+                    <version>${flink.version}</version>
+                    <scope>compile</scope>
+                </dependency>
+
+                <dependency>
+                    <groupId>com.alibaba.blink</groupId>
+                    <artifactId>flink-scala_${scala.binary.version}</artifactId>
+                    <version>${flink.version}</version>
+                    <scope>compile</scope>
+                </dependency>
+
+                <!--add scala package-->
+                <dependency>
+                    <groupId>com.alibaba.blink</groupId>
+                    <artifactId>flink-streaming-scala_${scala.binary.version}</artifactId>
+                    <version>${flink.version}</version>
+                    <scope>compile</scope>
+                </dependency>
+
+                <dependency>
+                    <groupId>com.alibaba.blink</groupId>
+                    <artifactId>flink-table_${scala.binary.version}</artifactId>
+                    <version>${flink.version}</version>
+                    <scope>compile</scope>
+                </dependency>
+
+                <dependency>
+                    <groupId>com.alibaba.blink</groupId>
+                    <artifactId>flink-sql-client</artifactId>
+                    <version>${flink.version}</version>
+                    <scope>compile</scope>
+                </dependency>
             </dependencies>
         </profile>
     </profiles>

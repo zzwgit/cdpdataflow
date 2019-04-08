@@ -1,7 +1,9 @@
 package io.infinivision.flink.connectors.postgres;
 
 import io.infinivision.flink.connectors.jdbc.BaseRowJDBCInputFormat;
+import io.infinivision.flink.connectors.utils.JDBCTableOptions;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.java.io.jdbc.JDBCOptions;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -71,9 +73,9 @@ public class PostgresTableSource implements
 
     private BaseRowJDBCInputFormat createInputFormat(String queryTemplate) {
         // build the JDBCInputFormat
-        String userName = tableProperties.getString(PostgresOptions.USER_NAME);
-        String password = tableProperties.getString(PostgresOptions.PASSWORD);
-        String dbURL = tableProperties.getString(PostgresOptions.DB_URL);
+        String userName = tableProperties.getString(JDBCOptions.USER_NAME);
+        String password = tableProperties.getString(JDBCOptions.PASSWORD);
+        String dbURL = tableProperties.getString(JDBCOptions.DB_URL);
 
         return BaseRowJDBCInputFormat.buildBaseRowJDBCInputFormat()
                 .setUsername(userName)
@@ -96,7 +98,7 @@ public class PostgresTableSource implements
             fields.append(columnNames[i]);
         }
 
-        String tableName = tableProperties.getString(PostgresOptions.TABLE_NAME);
+        String tableName = tableProperties.getString(JDBCOptions.TABLE_NAME);
 
         String queryTemplate = String.format("SELECT %s FROM %s", fields, tableName);
         return execEnv.createInput(createInputFormat(queryTemplate), returnTypeInfo);
@@ -145,7 +147,7 @@ public class PostgresTableSource implements
         }
 
         // build the JDBCInputFormat
-        String tableName = tableProperties.getString(PostgresOptions.TABLE_NAME);
+        String tableName = tableProperties.getString(JDBCOptions.TABLE_NAME);
 
         // build the JDBCInputFormat according to richTableSchema
         StringBuilder fields = new StringBuilder();
@@ -164,7 +166,6 @@ public class PostgresTableSource implements
             if (lookupKeyString.length != 1 && i != lookupKeyString.length -1) {
                 question.append(" and ");
             }
-
         }
 
         return String.format("SELECT %s FROM %s WHERE %s", fields, tableName, question);
@@ -172,12 +173,16 @@ public class PostgresTableSource implements
 
     @Override
     public TableFunction<BaseRow> getLookupFunction(int[] lookupKeys) {
+        // validate lookup config
+        new PostgresValidator().validateTableLookupOptions(tableProperties.toMap());
         String queryTemplate = buildLookupQueryTemplate(lookupKeys);
         return new PostgresLookupFunction(createInputFormat(queryTemplate), returnType);
     }
 
     @Override
     public AsyncTableFunction<BaseRow> getAsyncLookupFunction(int[] lookupKeys) {
+        // validate lookup config
+        new PostgresValidator().validateTableLookupOptions(tableProperties.toMap());
         String queryTemplate = buildLookupQueryTemplate(lookupKeys);
         return new PostgresAsyncLookupFunction(tableProperties, queryTemplate, returnType);
     }
@@ -185,10 +190,25 @@ public class PostgresTableSource implements
     @Override
     public LookupConfig getLookupConfig() {
         LookupConfig config = new LookupConfig();
-        config.setAsyncEnabled(true);
-        config.setAsyncTimeoutMs(10000);
-//        config.setAsyncBufferCapacity(10000);
-        config.setAsyncOutputMode(LookupConfig.AsyncOutputMode.ORDERED);
+        String mode = tableProperties.getString(JDBCTableOptions.MODE, JDBCTableOptions.JOIN_MODE.ASYNC.name());
+        boolean isAsync = false;
+        if (mode.equalsIgnoreCase(JDBCTableOptions.JOIN_MODE.ASYNC.name())) {
+            isAsync = true;
+        }
+
+        if (isAsync) {
+            config.setAsyncEnabled(true);
+            String timeout = tableProperties.getString(JDBCTableOptions.TIMEOUT, "10000");
+            config.setAsyncTimeoutMs(Integer.valueOf(timeout));
+
+            String capacity = tableProperties.getString(JDBCTableOptions.BUFFER_CAPACITY, "100");
+            config.setAsyncBufferCapacity(Integer.valueOf(capacity));
+            config.setAsyncOutputMode(LookupConfig.AsyncOutputMode.ORDERED);
+            LOG.info("==> async mode: timeout: " + timeout + " capacity: " + capacity);
+            System.out.println("==> async mode: timeout: " + timeout + " capacity: " + capacity);
+        }
+
+        // TODO cache stuff
         return config;
     }
 

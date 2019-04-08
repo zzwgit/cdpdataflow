@@ -1,5 +1,7 @@
 package io.infinivision.flink.connectors.postgres;
 
+import io.infinivision.flink.connectors.utils.JDBCTableOptions;
+import org.apache.flink.api.java.io.jdbc.JDBCOptions;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
@@ -41,9 +43,11 @@ public class PostgresTableFactory implements
 
     @Override
     public StreamTableSource<BaseRow> createStreamTableSource(Map<String, String> properties) {
-        preCheck(properties);
         TableProperties prop = new TableProperties();
         prop.putProperties(properties);
+
+        new PostgresValidator().validateTableOptions(properties);
+
         RichTableSchema schema = prop.readSchemaFromProperties(
                 Thread.currentThread().getContextClassLoader()
         );
@@ -123,15 +127,9 @@ public class PostgresTableFactory implements
 
     @Override
     public List<String> supportedProperties() {
-        return PostgresOptions.SUPPORTED_KEYS;
+        List<String> properties = new ArrayList<>(JDBCOptions.SUPPORTED_KEYS);
+        properties.addAll(JDBCTableOptions.SUPPORTED_KEYS);
+        return properties;
     }
 
-    private void preCheck(Map<String, String> properties) {
-        DescriptorProperties descriptorProperties = new DescriptorProperties();
-        descriptorProperties.putProperties(properties);
-        descriptorProperties.validateString(PostgresOptions.USER_NAME.key(), false, 1);
-        descriptorProperties.validateString(PostgresOptions.PASSWORD.key(), false, 1);
-        descriptorProperties.validateString(PostgresOptions.DB_URL.key(), false, 1);
-        descriptorProperties.validateString(PostgresOptions.TABLE_NAME.key(), false, 1);
-    }
 }
