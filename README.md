@@ -16,8 +16,27 @@ docker run --name postgres -e POSTGRES_PASSWORD=123456 -p 25432:5432 -d postgres
 
 ## Postgres Connector
 
-* table source ddl
+* table source ddl synx
 ```sql
+CREATE TABLE tableName(
+  columnName dataType,
+  columnName dataType,
+  ...
+) WITH (
+  propertyName=propertyValue,
+  propertyName=propertyValue,
+  ...
+)
+```
+
+### Properties description
+| type  | connector.version  | username  | password  | tablename  | dburl  | cache | cacheTTLms | mode |
+| :--:  | :---------------:  | :------:  | :------:  | :-------:  | :---:  | :---: | :--------: | :--: |
+| postgres  | 9.4  | 用户名  | 密码  | 表名  | 数据库连接URL | NONE,LRU,ALL | LRU cache TTL | async,sync |
+
+### Temporal Table Join Example
+```sql
+-- create dimision table
 CREATE TABLE csv_adfeature (
   aid VARCHAR NOT NULL,
   advertiser_id VARCHAR NOT NULL,
@@ -36,11 +55,8 @@ CREATE TABLE csv_adfeature (
   tablename = 'adFeature',
   dburl = 'jdbc:postgresql://localhost:5432/postgres'
 );
-```
 
-* Temporal Table Join
-```sql
-// create probe side table
+-- create probe side table
 create table train (
   aid VARCHAR NOT NULL,
   uid VARCHAR NOT NULL,
@@ -52,7 +68,7 @@ create table train (
 );
 
 
-// temporal table join
+-- temporal table join sql query
 SELECT
 p.aid, p.uid, b.advertiser_id
 FROM train AS p
