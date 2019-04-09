@@ -17,8 +17,7 @@ public class EnvHandler {
 
     private static EnvHandler INSTANCE = null;
 
-    public static synchronized EnvHandler getInstance()
-    {
+    public static synchronized EnvHandler getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new EnvHandler();
         }
@@ -27,6 +26,10 @@ public class EnvHandler {
 
     public void setAttributes(ContextInfoEntity contextInfo) throws IOException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
 
+        CheckPointEntity checkPointEntity = contextInfo.getCheckPointEntity();
+        if (null == checkPointEntity || null == checkPointEntity.getIntervalTime() || checkPointEntity.getIntervalTime() <= 0) {
+            return;
+        }
         // ExecutionContext<?> executionContext =
         // executor.getOrCreateExecutionContext(sessionContext);
         Method executorMethod = contextInfo.getExecutor().getClass().getDeclaredMethod("getOrCreateExecutionContext",
@@ -36,11 +39,6 @@ public class EnvHandler {
         ExecutionContext.EnvironmentInstance envInst = executionContext.createEnvironmentInstance();
         StreamExecutionEnvironment env = envInst.getStreamExecutionEnvironment();
 
-        CheckPointEntity checkPointEntity = contextInfo.getCheckPointEntity();
-
-        if(null == checkPointEntity.getIntervalTime()||checkPointEntity.getIntervalTime()<=0){
-            return;
-        }
 
         //是否启动checkpoint
         env.enableCheckpointing(checkPointEntity.getIntervalTime(), checkPointEntity.getCheckpointingMode());
@@ -50,15 +48,14 @@ public class EnvHandler {
         config.setMinPauseBetweenCheckpoints(checkPointEntity.getMinPauseBetweenCheckpoints());
         config.setCheckpointTimeout(checkPointEntity.getCheckpointTimeout());
 
-        if(checkPointEntity.getEnableExternalizedCheckpoint()){
+        if (checkPointEntity.getEnableExternalizedCheckpoint()) {
             config.enableExternalizedCheckpoints(CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
 
             String stateBackend = checkPointEntity.getStateBackend();
             String checkpointDataUri = checkPointEntity.getCheckpointDataUri();
 
             //TODO
-            switch (stateBackend)
-            {
+            switch (stateBackend) {
                 case "rocksdb":
                     env.setStateBackend(new RocksDBStateBackend(checkpointDataUri, true));
                     break;

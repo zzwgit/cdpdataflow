@@ -19,7 +19,7 @@ public class CheckPointEntity {
     }
 
     public CheckPointEntity(Long intervalTime, String mode, String stateBackend, String checkpointDataUri) {
-        if(null!=intervalTime&&intervalTime.longValue()>0){
+        if (null != intervalTime && intervalTime.longValue() > 0) {
             this.intervalTime = intervalTime;
             this.minPauseBetweenCheckpoints = null != intervalTime && intervalTime > 0 ? intervalTime / 10 : 0;
             this.checkpointTimeout = null != intervalTime && intervalTime > 0 ? intervalTime / 10 : 0;

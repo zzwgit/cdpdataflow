@@ -51,7 +51,8 @@ public class Dispatcher {
         //libs
         List<URL> libDirs = OptionsParser.checkUrls(commandLine, CliOptionsParser.OPTION_LIBRARY);
         //checkpoint
-        CheckPointEntity checkPointEntity = new CheckPointEntity();
+        String interval = commandLine.getOptionValue(OptionsParser.OPTION_CP_INTERVALTIME.getOpt(), "-1");
+        CheckPointEntity checkPointEntity = new CheckPointEntity(Long.parseLong(interval), commandLine.getOptionValue(OptionsParser.OPTION_CP_MODE.getOpt()), commandLine.getOptionValue(OptionsParser.OPTION_CP_STATEBACKEND.getOpt()), commandLine.getOptionValue(OptionsParser.OPTION_CP_STATECHECKPOINTSDIR.getOpt()));
 
         //fromSavepoint
         String fromSavepoint = commandLine.getOptionValue(OptionsParser.OPTION_FROMSAVEPOINT.getOpt());
@@ -63,9 +64,10 @@ public class Dispatcher {
 
         // fromsavepoints
         if (StringUtils.isNotEmpty(fromSavepoint)) {
-            Map<String, Object> sp = Maps.newHashMap(sessionEnv.getDeployment().asMap());
-            sp.put("-s", fromSavepoint);
-            sp.put("-n", "true");
+            Map<String, Object> sp = Maps.newHashMap();
+            sp.put("fromSavepoint", fromSavepoint);
+            sp.put("allowNonRestoredState", "true");
+            sp.putAll(sessionEnv.getDeployment().asMap());
             sessionEnv.setDeployment(sp);
         }
 
