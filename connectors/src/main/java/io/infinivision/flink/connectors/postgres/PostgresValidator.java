@@ -34,31 +34,34 @@ public class PostgresValidator extends ConnectorDescriptorValidator {
         descriptorProperties.putProperties(properties);
 
         // validate look up mode
-        String mode = properties.getOrDefault(JDBCTableOptions.MODE, JDBCTableOptions.JOIN_MODE.ASYNC.name());
+        String mode = properties.getOrDefault(JDBCTableOptions.MODE.key(), JDBCTableOptions.JOIN_MODE.ASYNC.name());
         if (!JDBCTableOptions.JOIN_MODE.isValid(mode)) {
             throw new ValidationException("look up mode only support sync and async but the given is: "
                     + mode);
         }
 
         // validate cache
-        String cache = properties.getOrDefault(JDBCTableOptions.CACHE, JDBCTableOptions.CacheType.NONE.name());
-        boolean isValid = JDBCTableOptions.CacheType.isValid(cache);
-        if (!isValid) {
-            throw new ValidationException("cache type only support NONE/LRU/ALL but the given is: "
-                    + cache);
+        if (properties.containsKey(JDBCTableOptions.CACHE.key())) {
+            String cache = properties.get(JDBCTableOptions.CACHE.key());
+            boolean isValid = JDBCTableOptions.CacheType.isValid(cache);
+            if (!isValid) {
+                throw new ValidationException("cache type only support NONE/LRU/ALL but the given is: "
+                        + cache);
+            }
+
+            // validate LRU TTL if any
+            JDBCTableOptions.CacheType cacheType = JDBCTableOptions.CacheType.valueOf(cache.toUpperCase());
+            if (cacheType == JDBCTableOptions.CacheType.LRU) {
+                descriptorProperties.validateInt(JDBCTableOptions.CACHE_TTL.key(), false);
+            }
         }
 
-        // validate LRU TTL if any
-        JDBCTableOptions.CacheType cacheType = JDBCTableOptions.CacheType.valueOf(cache.toUpperCase());
-        if (cacheType == JDBCTableOptions.CacheType.LRU) {
-            descriptorProperties.validateInt(JDBCTableOptions.CACHE_TTL, false);
-        }
 
         // validate async collector timeout
-        descriptorProperties.validateInt(JDBCTableOptions.TIMEOUT, true);
+        descriptorProperties.validateInt(JDBCTableOptions.TIMEOUT.key(), true);
 
         // validate buffer capactiy
-        descriptorProperties.validateInt(JDBCTableOptions.BUFFER_CAPACITY, true);
+        descriptorProperties.validateInt(JDBCTableOptions.BUFFER_CAPACITY.key(), true);
     }
 
 }

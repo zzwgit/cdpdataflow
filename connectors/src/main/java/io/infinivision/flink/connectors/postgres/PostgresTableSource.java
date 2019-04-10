@@ -198,7 +198,7 @@ public class PostgresTableSource implements
     @Override
     public LookupConfig getLookupConfig() {
         LookupConfig config = new LookupConfig();
-        String mode = tableProperties.getString(JDBCTableOptions.MODE, JDBCTableOptions.JOIN_MODE.ASYNC.name());
+        String mode = tableProperties.getString(JDBCTableOptions.MODE);
         boolean isAsync = false;
         if (mode.equalsIgnoreCase(JDBCTableOptions.JOIN_MODE.ASYNC.name())) {
             isAsync = true;
@@ -206,10 +206,10 @@ public class PostgresTableSource implements
 
         if (isAsync) {
             config.setAsyncEnabled(true);
-            String timeout = tableProperties.getString(JDBCTableOptions.TIMEOUT, "10000");
+            String timeout = tableProperties.getString(JDBCTableOptions.TIMEOUT);
             config.setAsyncTimeoutMs(Integer.valueOf(timeout));
 
-            String capacity = tableProperties.getString(JDBCTableOptions.BUFFER_CAPACITY, "100");
+            String capacity = tableProperties.getString(JDBCTableOptions.BUFFER_CAPACITY);
             config.setAsyncBufferCapacity(Integer.valueOf(capacity));
             config.setAsyncOutputMode(LookupConfig.AsyncOutputMode.ORDERED);
         }
