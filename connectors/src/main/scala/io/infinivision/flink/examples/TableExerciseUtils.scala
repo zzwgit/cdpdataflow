@@ -1,4 +1,4 @@
-package io.infinivision.flink.connectors.examples
+package io.infinivision.flink.examples
 
 import io.infinivision.flink.connectors.postgres.PostgresTableFactory
 import org.apache.flink.table.api.RichTableSchema

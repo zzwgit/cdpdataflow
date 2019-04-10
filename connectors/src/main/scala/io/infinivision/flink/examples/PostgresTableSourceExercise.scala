@@ -1,13 +1,12 @@
-package io.infinivision.flink.connectors.examples
+package io.infinivision.flink.examples
 
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.scala._
-import org.apache.flink.api.scala._
 import org.apache.flink.table.api.TableEnvironment
 import org.apache.flink.table.util.TableProperties
 import org.apache.flink.types.Row
+import org.apache.flink.table.api.scala._
+import org.apache.flink.api.scala._
 import scala.collection.JavaConverters._
-
 import scala.collection.mutable
 
 object PostgresTableSourceExercise {
@@ -40,4 +39,3 @@ object PostgresTableSourceExercise {
     env.execute("Postgres Table Source Exercise")
   }
 }
-

@@ -1,20 +1,17 @@
-package io.infinivision.flink.connectors.examples
-
-import java.util.Collections
+package io.infinivision.flink.examples
 
 import io.infinivision.flink.connectors.postgres.PostgresTableSource
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api.{RichTableSchema, TableEnvironment}
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
+import org.apache.flink.table.api.{RichTableSchema, TableEnvironment}
 import org.apache.flink.table.factories.csv.CsvTableFactory
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.util.TableProperties
+import org.apache.flink.types.Row
 import org.apache.flink.table.api.scala._
 import org.apache.flink.api.scala._
-import org.apache.flink.types.Row
-
-import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.collection.JavaConverters._
 
 object PostgresSQLExercise {
 
