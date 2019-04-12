@@ -41,7 +41,7 @@ CREATE TABLE tableName(
 | tablename  | DB tablename (both) |  true    |      no        |
 | password  | db password (both)    |  true    |      no        |
 | dburl  | db connection url     |  true    |      no        |
-| updatemodde  | append/upsert(for sink table) |  false    |   upsert    |
+| updatemode  | append/upsert(for sink table) |  false    |   upsert    |
 | cache  | none/LRU/ALL(for dimension table) |  false    |     none      |
 | cacheTTLms  | cache TTL(for dimension table) |  false    |    3600000     |
 | mode  | async/sync(for dimension table) |  false    |    async        |
@@ -135,7 +135,6 @@ create table output (
 INSERT INTO output
 SELECT aid, uid, label
 FROM input
-
 ```
 
 ### Table Sink Example(upsert mode)
@@ -170,8 +169,8 @@ create table output (
   password = '123456',
   tablename = 'append_output',
   dburl = 'jdbc:postgresql://localhost:5432/postgres',
-  updateMode = 'append',
-  PRIMARY KEY('aid') -- 或者 UNIQUE INDEX("aid") 必填
+  updateMode = 'upsert',
+  PRIMARY KEY('aid') -- 或者 UNIQUE INDEX('aid') 必填
 );
 
 INSERT INTO output
