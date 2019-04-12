@@ -16,16 +16,13 @@ import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.StreamTableSource;
 import org.apache.flink.table.util.TableProperties;
-import org.apache.flink.types.Row;
 import org.apache.flink.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Option;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
-import static io.infinivision.flink.connectors.postgres.PostgresValidator.CONNECTOR_VERSION_VALUE_94;
 import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.*;
 
 public class PostgresTableFactory implements
@@ -36,10 +33,6 @@ public class PostgresTableFactory implements
     private static final Logger LOG = LoggerFactory.getLogger(PostgresTableFactory.class);
 
     public static final String DRIVERNAME = "org.postgresql.Driver";
-
-    public static String postgresVersion() {
-        return CONNECTOR_VERSION_VALUE_94;
-    }
 
     @Override
     public StreamTableSource<BaseRow> createStreamTableSource(Map<String, String> properties) {
@@ -129,7 +122,7 @@ public class PostgresTableFactory implements
                 .password(prop.getString(JDBCOptions.PASSWORD))
                 .dbURL(prop.getString(JDBCOptions.DB_URL))
                 .driverName(DRIVERNAME)
-                .driverVersion(postgresVersion())
+                .driverVersion(prop.getString(JDBCTableOptions.VERSION))
                 .tableName(prop.getString(JDBCOptions.TABLE_NAME));
 
         Set<String> primaryKeys = new HashSet<>();
@@ -190,7 +183,6 @@ public class PostgresTableFactory implements
     public Map<String, String> requiredContext() {
         Map<String, String> context = new HashMap<>();
         context.put(CONNECTOR_TYPE, "POSTGRES");
-        context.put(CONNECTOR_VERSION, postgresVersion()); // version
         context.put(CONNECTOR_PROPERTY_VERSION, "1");
         return context;
     }

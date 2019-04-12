@@ -30,25 +30,27 @@ object PostgresTableSinkExercise {
 
     // create postgres upsert table sink
     val postgresSinkProperties = mutable.Map[String, String]()
-    postgresSinkProperties += (("updatemode", "retract"))
+    postgresSinkProperties += (("updatemode", "upsert"))
+    postgresSinkProperties += (("version", "9.6"))
     postgresSinkProperties +=(("username", "postgres"))
     postgresSinkProperties += (("password", "123456"))
-    postgresSinkProperties += (("tablename", "output"))
+    postgresSinkProperties += (("tablename", "train_output"))
     postgresSinkProperties += (("dburl", "jdbc:postgresql://localhost:5432/postgres"))
     val postgresSinkTableProperties = new TableProperties
     postgresSinkTableProperties.putProperties(postgresSinkProperties.asJava)
 
     val columnNames: Array[String] = Array(
-      "aid", "count"
+      "aid", "uid", "label"
     )
     val columnTypes: Array[InternalType] = Array(
       DataTypes.STRING,
-      DataTypes.LONG
+      DataTypes.STRING,
+      DataTypes.STRING
     )
 
     val richSchema = new RichTableSchema(columnNames, columnTypes)
     val uniqueKeys = List(
-      List("aid").asJava
+      List("aid", "uid").asJava
     ).asJava
 //    richSchema.setPrimaryKey("aid")
     richSchema.setUniqueKeys(uniqueKeys)
@@ -61,9 +63,8 @@ object PostgresTableSinkExercise {
     val sql =
       """
         |INSERT INTO output
-        |SELECT aid, count(uid) as cnt
+        |SELECT aid, uid, label
         |FROM train
-        |GROUP BY aid
       """.stripMargin
     tEnv.sqlUpdate(sql)
 

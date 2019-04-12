@@ -35,6 +35,11 @@ public class JDBCTableOptions {
             return false;
         }
     }
+
+    // database version
+    public static final ConfigOption<String> VERSION = key("version".toLowerCase())
+            .defaultValue("9.5");
+
     // cache Type - NONE, LRU, ALL
     public static final ConfigOption<String> CACHE = key("username".toLowerCase())
             .defaultValue("none");
@@ -56,6 +61,7 @@ public class JDBCTableOptions {
             .defaultValue("10000");
 
     public static final List<String> SUPPORTED_KEYS = Arrays.asList(
+            VERSION.key(),
             CACHE.key(),
             CACHE_TTL.key(),
             MODE.key(),

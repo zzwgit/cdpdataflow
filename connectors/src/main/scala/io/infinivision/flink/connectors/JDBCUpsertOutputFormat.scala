@@ -89,14 +89,18 @@ class JDBCUpsertOutputFormat(
     }
   }
 
-  /**
-    * before 9.5
-    * with tests as (update pg_sink set phone_num='123' where id=6 returning *)
-    * insert into pg_sink select 1,'test','553780043@qq.com', '123445', 123000,123000 where not exists (select 1 from tests);
+  /** CREATE TABLE (
+    *   aid varchar,
+    *   uid varchar,
+    *   label int
+    * )
     *
+    * before 9.5
+    * WITH upserts as (UPDATE train_output set label = 1 WHERE aid='1781' and uid='55796870'  returning *)
+    * INSERT INTO train_output SELECT '1781','55796870',1 WHERE NOT EXISTS (SELECT 1 FROM upserts)
     *
     * after 9.5
-    *
+    * insert into train_output values ('1781', '55796870', 0) on conflict (aid, uid) do update set label = 0
     *
     * @return upsert sql statement
     */
@@ -111,6 +115,7 @@ class JDBCUpsertOutputFormat(
       }
     ).mkString(",")
 
+
     // where placeholder
     val conditionPlaceHolder = uniqueKeys.asScala.map( _ + "=?").mkString(" and ")
 
@@ -118,13 +123,14 @@ class JDBCUpsertOutputFormat(
     val selectPlaceholder = Array.fill[String](fieldNames.length)("?").mkString(",")
 
     // build SQL
-    if (driverVersion.toDouble >= 9.5) {
+    if (driverVersion == "9.5") {
       s"""
-         |
+         | INSERT INTO $tableName VALUES ($selectPlaceholder)
+         | ON CONFLICT (${uniqueKeys.asScala.mkString(",")}) DO UPDATE SET $setPlaceHolder
        """.stripMargin
     } else {
       s"""
-         | WITH upserts as (UPDATE $tableName set $setPlaceHolder WHERE $conditionPlaceHolder RETURNING *)
+         | WITH upserts as (UPDATE $tableName SET $setPlaceHolder WHERE $conditionPlaceHolder RETURNING *)
          | INSERT INTO $tableName SELECT $selectPlaceholder WHERE NOT EXISTS (SELECT 1 FROM upserts)
        """.stripMargin
     }
@@ -152,8 +158,16 @@ class JDBCUpsertOutputFormat(
   }
 
   private def updatePreparedStatement(row: Row): Unit = {
+    if (driverVersion == "9.4") {
+      updatePreparedStatement94(row)
+    } else {
+      updatePreparedStatement95(row)
+    }
+  }
+
+  private def updatePreparedStatement94(row: Row): Unit = {
     val updateFieldIndex = fieldNames
-      .filter { !uniqueKeys.contains(_)}
+      .filter { !uniqueKeys.contains(_) }
       .map { fieldNames.indexOf(_) }
     val conditionFieldIndex = uniqueKeys.asScala.toArray.map { fieldNames.indexOf(_) }
     val fieldSize = row.getArity
@@ -278,4 +292,87 @@ class JDBCUpsertOutputFormat(
     }
   }
 
+  private def updatePreparedStatement95(row: Row): Unit = {
+    val updateFieldIndex = fieldNames
+      .filter { !uniqueKeys.contains(_) }
+      .map { fieldNames.indexOf(_) }
+    val fieldSize = row.getArity
+
+    for (index <- 0 until row.getArity) {
+      val field = row.getField(index)
+      field match {
+        case f: String =>
+          if (updateFieldIndex.contains(index)) {
+            statement.setString(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+          }
+          statement.setString(index + 1, f)
+        case f: JLong =>
+          if (updateFieldIndex.contains(index)) {
+            statement.setLong(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+          }
+          statement.setLong(fieldSize + index + 1, f)
+        case f: JBigDecimal =>
+          if (updateFieldIndex.contains(index)) {
+            statement.setBigDecimal(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+          }
+          statement.setBigDecimal(fieldSize+index+1, f)
+        case f: Integer =>
+          if (updateFieldIndex.contains(index)) {
+            statement.setInt(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+          }
+          statement.setInt(fieldSize+index+1, f)
+        case f: JDouble =>
+          if (updateFieldIndex.contains(index)) {
+            statement.setDouble(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+          }
+          statement.setDouble(fieldSize+index+1, f)
+        case f: JBool =>
+          if (updateFieldIndex.contains(index)) {
+            statement.setBoolean(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+          }
+          statement.setBoolean(fieldSize+index+1, f)
+        case f: JFloat =>
+          if (updateFieldIndex.contains(index)) {
+            statement.setFloat(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+          }
+          statement.setFloat(fieldSize+index+1, f)
+        case f: JShort =>
+          if (updateFieldIndex.contains(index)) {
+            statement.setShort(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+          }
+          statement.setShort(fieldSize+index+1, f)
+        case f: JByte =>
+          if (updateFieldIndex.contains(index)) {
+            statement.setByte(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+          }
+          statement.setByte(fieldSize+index+1, f)
+        case f: JArray =>
+          if (updateFieldIndex.contains(index)) {
+            statement.setArray(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+          }
+          statement.setArray(fieldSize+index+1, f)
+        case f: JDate =>
+          if (updateFieldIndex.contains(index)) {
+            statement.setDate(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+          }
+          statement.setDate(fieldSize+index+1, f)
+        case f: JTime =>
+          if (updateFieldIndex.contains(index)) {
+            statement.setTime(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+          }
+          statement.setTime(fieldSize+index+1, f)
+        case f: JTimestamp =>
+          if (updateFieldIndex.contains(index)) {
+            statement.setTimestamp(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+          }
+          statement.setTimestamp(fieldSize+index+1, f)
+        case _ =>
+          if (updateFieldIndex.contains(index)) {
+            statement.setObject(fieldSize + updateFieldIndex.indexOf(index) + 1, field)
+          }
+          statement.setObject(fieldSize+index+1, field)
+          LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
+      }
+    }
+  }
 }
