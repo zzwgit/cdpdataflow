@@ -3,11 +3,12 @@ package io.infinivision.flink.connectors
 import org.apache.flink.table.sinks.{BatchCompatibleStreamTableSink, TableSinkBase, UpsertStreamTableSink}
 import java.lang.{Boolean => JBool}
 import java.util.{Set => JSet}
+
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
 import org.apache.flink.table.api.RichTableSchema
 import org.apache.flink.table.api.types.{DataType, DataTypes}
-import org.apache.flink.table.util.Logging
+import org.apache.flink.table.util.{Logging, TableConnectorUtil}
 import org.apache.flink.types.Row
 
 class JDBCUpsertTableSink(
@@ -23,12 +24,13 @@ class JDBCUpsertTableSink(
   }
 
   override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]]): DataStreamSink[_] = {
-    LOG.debug("emitDataStream")
-    null
+    dataStream.addSink(new JDBCUpsertSinkFunction(outputFormat))
+      .name(TableConnectorUtil.generateRuntimeName(getClass, getFieldNames))
   }
 
   override def emitBoundedStream(boundedStream: DataStream[JTuple2[JBool, Row]]): DataStreamSink[_] = {
-    null
+    boundedStream.addSink(new JDBCUpsertSinkFunction(outputFormat))
+      .name(TableConnectorUtil.generateRuntimeName(getClass, getFieldNames))
   }
 
   override def setIsAppendOnly(isAppendOnly: JBool): Unit = {}
@@ -45,10 +47,10 @@ object JDBCUpsertTableSink {
     private var userName: String = _
     private var password: String = _
     private var driverName: String = _
+    private var driverVersion: String = _
     private var dbURL: String = _
     private var tableName: String = _
-    private var primaryKey: Array[String] = _
-    private var uniqueKeys: JSet[JSet[String]] = _
+    private var uniqueKeys: Option[JSet[String]] = None
     private var schema: RichTableSchema = _
 
     def userName(userName: String): Builder = {
@@ -66,6 +68,11 @@ object JDBCUpsertTableSink {
       this
     }
 
+    def driverVersion(driverVersion: String): Builder = {
+      this.driverVersion = driverVersion
+      this
+    }
+
     def dbURL(dbURL: String): Builder = {
       this.dbURL = dbURL
       this
@@ -76,13 +83,8 @@ object JDBCUpsertTableSink {
       this
     }
 
-    def uniqueKeys(uniqueKeys: JSet[JSet[String]]): Builder = {
+    def uniqueKeys(uniqueKeys: Option[JSet[String]]): Builder = {
       this.uniqueKeys = uniqueKeys
-      this
-    }
-
-    def primaryKey(primaryKey: Array[String]): Builder = {
-      this.primaryKey = primaryKey
       this
     }
 
@@ -97,19 +99,17 @@ object JDBCUpsertTableSink {
         throw new IllegalArgumentException("table schema can not be null")
       }
 
-      if (primaryKey.length == 0 && uniqueKeys.isEmpty) {
-        throw new IllegalArgumentException("JDBC Upsert Table should at least contain a primary key or unique index")
-      }
-
       new JDBCUpsertTableSink(
         new JDBCUpsertOutputFormat(
           userName,
           password,
           driverName,
+          driverVersion,
           dbURL,
           tableName,
-          primaryKey,
-          uniqueKeys
+          schema.getColumnNames,
+          schema.getColumnTypes,
+          uniqueKeys.get
         ),
         schema
       )

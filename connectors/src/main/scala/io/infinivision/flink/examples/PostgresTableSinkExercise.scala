@@ -1,16 +1,16 @@
 package io.infinivision.flink.examples
 
+import io.infinivision.flink.connectors.postgres.PostgresTableFactory
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.api.{RichTableSchema, TableEnvironment}
-import org.apache.flink.table.factories.csv.CsvTableFactory
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.util.TableProperties
 
 import scala.collection.mutable
 import scala.collection.JavaConverters._
 
-object CsvTableSinkExercise {
+object PostgresTableSinkExercise {
   def main(args: Array[String]): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
@@ -28,12 +28,15 @@ object CsvTableSinkExercise {
       .build()
     tEnv.registerTableSource("train", probeSource)
 
-    // create csv upsert table sink
-    val csvSinkProperties = mutable.Map[String, String]()
-    csvSinkProperties += (("path", "/Users/hongtaozhang/Downloads/train_retract_output.csv"))
-    csvSinkProperties += (("updatemode", "retract"))
-    val csvSinkTableProperties = new TableProperties
-    csvSinkTableProperties.putProperties(csvSinkProperties.asJava)
+    // create postgres upsert table sink
+    val postgresSinkProperties = mutable.Map[String, String]()
+    postgresSinkProperties += (("updatemode", "retract"))
+    postgresSinkProperties +=(("username", "postgres"))
+    postgresSinkProperties += (("password", "123456"))
+    postgresSinkProperties += (("tablename", "output"))
+    postgresSinkProperties += (("dburl", "jdbc:postgresql://localhost:5432/postgres"))
+    val postgresSinkTableProperties = new TableProperties
+    postgresSinkTableProperties.putProperties(postgresSinkProperties.asJava)
 
     val columnNames: Array[String] = Array(
       "aid", "count"
@@ -42,11 +45,17 @@ object CsvTableSinkExercise {
       DataTypes.STRING,
       DataTypes.LONG
     )
+
     val richSchema = new RichTableSchema(columnNames, columnTypes)
-    csvSinkTableProperties.putSchemaIntoProperties(richSchema)
-    val csvTableFactory = new CsvTableFactory
-    val csvTableSink = csvTableFactory.createStreamTableSink(csvSinkTableProperties.toMap)
-    tEnv.registerTableSink("output", csvTableSink)
+    val uniqueKeys = List(
+      List("aid").asJava
+    ).asJava
+//    richSchema.setPrimaryKey("aid")
+    richSchema.setUniqueKeys(uniqueKeys)
+    postgresSinkTableProperties.putSchemaIntoProperties(richSchema)
+    val postgresTableFactory = new PostgresTableFactory
+    val postgresTableSink = postgresTableFactory.createStreamTableSink(postgresSinkTableProperties.toMap)
+    tEnv.registerTableSink("output", postgresTableSink)
 
     // sql update
     val sql =
@@ -58,6 +67,6 @@ object CsvTableSinkExercise {
       """.stripMargin
     tEnv.sqlUpdate(sql)
 
-    env.execute("csv table sink exercise")
+    env.execute("postgres table sink exercise")
   }
 }

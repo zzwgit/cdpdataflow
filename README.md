@@ -29,10 +29,11 @@ CREATE TABLE tableName(
   [UNIQUE] INDEX(columnName,...)
   ...
 )
-
-NOTE: 维表至少需要一个index在on条件中
-
 ```
+Note:
+
+* 维表至少需要一个index在on条件中
+* 作为sink必须包含primary key或者unique index
 
 ### Properties description
 | type  | connector.version  | username  | password  | tablename  | dburl  | cache | cacheTTLms | mode |
@@ -80,4 +81,7 @@ FROM train AS p
 INNER JOIN
 adfeature FOR SYSTEM_TIME AS OF PROCTIME() AS b
 ON p.aid = b.aid;
+
+### table sink ddl synx
+
 ```
