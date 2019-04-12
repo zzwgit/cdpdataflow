@@ -6,6 +6,8 @@ import java.lang.{Boolean => JBool, Double => JDouble, Long => JLong}
 import java.lang.{Byte => JByte, Float => JFloat, Short => JShort}
 import java.sql.{Array => JArray, Date => JDate, Time => JTime, Timestamp => JTimestamp}
 import java.math.{BigDecimal => JBigDecimal}
+
+import io.infinivision.flink.connectors.postgres.PostgresValidator
 import org.apache.flink.types.Row
 
 import scala.collection.mutable.ArrayBuffer
@@ -70,7 +72,7 @@ class JDBCUpsertOutputFormat(
     val selectPlaceholder = fieldNames.map{ _ => "?" }.mkString(",")
 
     // build SQL
-    if (driverVersion == "9.5") {
+    if (driverVersion.equals(PostgresValidator.CONNECTOR_VERSION_VALUE_95)) {
       s"""
          | INSERT INTO $tableName VALUES ($selectPlaceholder)
          | ON CONFLICT (${uniqueKeys.asScala.mkString(",")}) DO UPDATE SET $setPlaceHolder
@@ -84,7 +86,7 @@ class JDBCUpsertOutputFormat(
   }
 
   override def updatePreparedStatement(row: Row): Unit = {
-    if (driverVersion == "9.4") {
+    if (driverVersion.equals(PostgresValidator.CONNECTOR_VERSION_VALUE_94)) {
       updatePreparedStatement94(row)
     } else {
       updatePreparedStatement95(row)
