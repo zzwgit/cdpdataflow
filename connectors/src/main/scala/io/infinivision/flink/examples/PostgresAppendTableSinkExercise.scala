@@ -10,7 +10,7 @@ import org.apache.flink.table.util.TableProperties
 import scala.collection.mutable
 import scala.collection.JavaConverters._
 
-object PostgresTableSinkExercise {
+object PostgresAppendTableSinkExercise {
   def main(args: Array[String]): Unit = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
@@ -30,11 +30,11 @@ object PostgresTableSinkExercise {
 
     // create postgres upsert table sink
     val postgresSinkProperties = mutable.Map[String, String]()
-    postgresSinkProperties += (("updatemode", "upsert"))
-    postgresSinkProperties += (("version", "9.6"))
+    postgresSinkProperties += (("updatemode", "append"))
+    postgresSinkProperties += (("version", "9.5"))
     postgresSinkProperties +=(("username", "postgres"))
     postgresSinkProperties += (("password", "123456"))
-    postgresSinkProperties += (("tablename", "train_output"))
+    postgresSinkProperties += (("tablename", "train_append_output"))
     postgresSinkProperties += (("dburl", "jdbc:postgresql://localhost:5432/postgres"))
     val postgresSinkTableProperties = new TableProperties
     postgresSinkTableProperties.putProperties(postgresSinkProperties.asJava)

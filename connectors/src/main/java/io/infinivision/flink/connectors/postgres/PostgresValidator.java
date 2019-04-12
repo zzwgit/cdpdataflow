@@ -21,6 +21,12 @@ public class PostgresValidator extends ConnectorDescriptorValidator {
     public static final String CONNECTOR_VERSION_VALUE_94 = "9.4";
     public static final String CONNECTOR_VERSION_VALUE_95 = "9.5";
 
+    public static final String APPEND_MODE = "append";
+    public static final String UPSERT_MODE = "upsert";
+
+    public static final List<String> CONNECT_VERSIONS = Arrays.asList(CONNECTOR_VERSION_VALUE_94, CONNECTOR_VERSION_VALUE_95);
+    public static final List<String> UPDATE_MODES = Arrays.asList(APPEND_MODE, UPSERT_MODE);
+
     public void validateTableOptions(Map<String, String> properties) {
         DescriptorProperties descriptorProperties = new DescriptorProperties();
         descriptorProperties.putProperties(properties);
@@ -30,8 +36,10 @@ public class PostgresValidator extends ConnectorDescriptorValidator {
         descriptorProperties.validateString(JDBCOptions.TABLE_NAME.key(), false, 1);
 
         // validate version
-        List<String> supportVersions = Arrays.asList(CONNECTOR_VERSION_VALUE_94, CONNECTOR_VERSION_VALUE_95);
-        descriptorProperties.validateEnumValues(JDBCTableOptions.VERSION.key(), true, supportVersions);
+        descriptorProperties.validateEnumValues(JDBCTableOptions.VERSION.key(), true, CONNECT_VERSIONS);
+
+        // validate update mode
+        descriptorProperties.validateEnumValues(JDBCTableOptions.UPDATE_MODE.key(), true, UPDATE_MODES);
 
         // validate cache
         if (properties.containsKey(JDBCTableOptions.CACHE.key())) {

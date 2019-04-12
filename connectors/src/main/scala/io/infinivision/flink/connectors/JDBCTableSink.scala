@@ -11,25 +11,24 @@ import org.apache.flink.table.api.types.{DataType, DataTypes}
 import org.apache.flink.table.util.{Logging, TableConnectorUtil}
 import org.apache.flink.types.Row
 
-class JDBCUpsertTableSink(
-   outputFormat: JDBCUpsertOutputFormat,
-   schema: RichTableSchema)
+class JDBCTableSink(
+  outputFormat: JDBCBaseOutputFormat)
   extends TableSinkBase[JTuple2[JBool, Row]]
-  with UpsertStreamTableSink[Row]
-  with BatchCompatibleStreamTableSink[JTuple2[JBool, Row]]
-  with Logging {
+    with UpsertStreamTableSink[Row]
+    with BatchCompatibleStreamTableSink[JTuple2[JBool, Row]]
+    with Logging {
 
   override protected def copy: TableSinkBase[JTuple2[JBool, Row]] = {
-    new JDBCUpsertTableSink(outputFormat, schema)
+    new JDBCTableSink(outputFormat)
   }
 
   override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]]): DataStreamSink[_] = {
-    dataStream.addSink(new JDBCUpsertSinkFunction(outputFormat))
+    dataStream.addSink(new JDBCTableSinkFunction(outputFormat))
       .name(TableConnectorUtil.generateRuntimeName(getClass, getFieldNames))
   }
 
   override def emitBoundedStream(boundedStream: DataStream[JTuple2[JBool, Row]]): DataStreamSink[_] = {
-    boundedStream.addSink(new JDBCUpsertSinkFunction(outputFormat))
+    boundedStream.addSink(new JDBCTableSinkFunction(outputFormat))
       .name(TableConnectorUtil.generateRuntimeName(getClass, getFieldNames))
   }
 
@@ -42,7 +41,8 @@ class JDBCUpsertTableSink(
 
 }
 
-object JDBCUpsertTableSink {
+object JDBCTableSink {
+
   class Builder {
     private var userName: String = _
     private var password: String = _
@@ -50,8 +50,10 @@ object JDBCUpsertTableSink {
     private var driverVersion: String = _
     private var dbURL: String = _
     private var tableName: String = _
-    private var uniqueKeys: Option[JSet[String]] = None
-    private var schema: RichTableSchema = _
+    private var primaryKeys: Option[JSet[String]] = None
+    private var uniqueKeys: Option[JSet[JSet[String]]] = None
+    private var schema: Option[RichTableSchema] = None
+    private var updateMode: String = _
 
     def userName(userName: String): Builder = {
       this.userName = userName
@@ -83,23 +85,62 @@ object JDBCUpsertTableSink {
       this
     }
 
-    def uniqueKeys(uniqueKeys: Option[JSet[String]]): Builder = {
+    def primaryKeys(primaryKeys: Option[JSet[String]]): Builder = {
+      this.primaryKeys = primaryKeys
+      this
+    }
+
+    def uniqueKeys(uniqueKeys: Option[JSet[JSet[String]]]): Builder = {
       this.uniqueKeys = uniqueKeys
       this
     }
 
-    def schema(schema: RichTableSchema): Builder = {
+    def schema(schema: Option[RichTableSchema]): Builder = {
       this.schema = schema
       this
     }
 
-    def build(): JDBCUpsertTableSink = {
+    def updateMode(updateMode: String): Builder = {
+      this.updateMode = updateMode
+      this
+    }
+
+    def build(): JDBCTableSink = {
       // check condition
-      if (schema == null) {
+      if (schema.isEmpty) {
         throw new IllegalArgumentException("table schema can not be null")
       }
 
-      new JDBCUpsertTableSink(
+      val outputFormat: JDBCBaseOutputFormat = if (updateMode == "append") {
+        new JDBCAppendOutputFormat(
+          userName,
+          password,
+          driverName,
+          driverVersion,
+          dbURL,
+          tableName,
+          schema.get.getColumnNames,
+          schema.get.getColumnTypes
+        )
+      } else {
+
+        // validate index keys
+        val uniqueIndex = if (primaryKeys.isEmpty && uniqueKeys.isEmpty) {
+          throw new IllegalArgumentException("JDBCUpsertTableSink should at least contain one primary key or one unique index")
+        } else if (primaryKeys.isDefined){
+          primaryKeys.get
+        } else {
+          if(uniqueKeys.get.size != 1) {
+            throw new IllegalArgumentException("JDBCUpsertTableSink should contain only one unique index")
+          }
+
+          if (uniqueKeys.get.size == schema.get.getColumnNames.length) {
+            throw new IllegalArgumentException("JDBCUpsertTableSink unique key size should less than total column size")
+          }
+
+          uniqueKeys.get.iterator.next
+        }
+
         new JDBCUpsertOutputFormat(
           userName,
           password,
@@ -107,12 +148,13 @@ object JDBCUpsertTableSink {
           driverVersion,
           dbURL,
           tableName,
-          schema.getColumnNames,
-          schema.getColumnTypes,
-          uniqueKeys.get
-        ),
-        schema
-      )
+          schema.get.getColumnNames,
+          schema.get.getColumnTypes,
+          uniqueIndex
+        )
+      }
+
+      new JDBCTableSink(outputFormat)
     }
   }
 

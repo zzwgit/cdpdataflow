@@ -9,7 +9,7 @@ import static org.apache.flink.configuration.ConfigOptions.key;
 
 public class JDBCTableOptions {
 
-    public static enum JOIN_MODE {
+    public enum JOIN_MODE {
         SYNC,
         ASYNC;
 
@@ -40,8 +40,12 @@ public class JDBCTableOptions {
     public static final ConfigOption<String> VERSION = key("version".toLowerCase())
             .defaultValue("9.5");
 
+    // database update mode
+    public static final ConfigOption<String> UPDATE_MODE = key("updateMode".toLowerCase())
+            .defaultValue("upsert");
+
     // cache Type - NONE, LRU, ALL
-    public static final ConfigOption<String> CACHE = key("username".toLowerCase())
+    public static final ConfigOption<String> CACHE = key("cache".toLowerCase())
             .defaultValue("none");
 
     // cache TTL for LRU

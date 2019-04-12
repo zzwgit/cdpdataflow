@@ -1,6 +1,6 @@
 package io.infinivision.flink.connectors.postgres;
 
-import io.infinivision.flink.connectors.JDBCUpsertTableSink;
+import io.infinivision.flink.connectors.JDBCTableSink;
 import io.infinivision.flink.connectors.utils.JDBCTableOptions;
 import org.apache.flink.api.java.io.jdbc.JDBCOptions;
 import org.apache.flink.table.api.RichTableSchema;
@@ -94,7 +94,7 @@ public class PostgresTableFactory implements
 
     }
 
-    private TableSink createJDBCUpsertStreamTableSink(Map<String, String> properties) {
+    private TableSink createJDBCStreamTableSink(Map<String, String> properties) {
         TableProperties prop = new TableProperties();
         prop.putProperties(properties);
 
@@ -117,13 +117,14 @@ public class PostgresTableFactory implements
                 "columnNames length must be equal to nullable length");
 
 
-        JDBCUpsertTableSink.Builder builder = JDBCUpsertTableSink.builder()
+        JDBCTableSink.Builder builder = JDBCTableSink.builder()
                 .userName(prop.getString(JDBCOptions.USER_NAME))
                 .password(prop.getString(JDBCOptions.PASSWORD))
                 .dbURL(prop.getString(JDBCOptions.DB_URL))
                 .driverName(DRIVERNAME)
                 .driverVersion(prop.getString(JDBCTableOptions.VERSION))
-                .tableName(prop.getString(JDBCOptions.TABLE_NAME));
+                .tableName(prop.getString(JDBCOptions.TABLE_NAME))
+                .updateMode(prop.getString(JDBCTableOptions.UPDATE_MODE));
 
         Set<String> primaryKeys = new HashSet<>();
         Set<Set<String>> uniqueKeys = new HashSet<>();
@@ -140,24 +141,32 @@ public class PostgresTableFactory implements
             }
         }
 
-        if (primaryKeys.isEmpty() && uniqueKeys.isEmpty()) {
-            throw new IllegalArgumentException("JDBCUpsertTableSink should at least contain one primary key or one unique index");
-        } else if (!primaryKeys.isEmpty()) {
-            if (primaryKeys.size() == columnNames.length) {
-                throw new IllegalArgumentException("JDBCUpsertTableSink primary key fields size should less than total column size");
-            }
-            builder.uniqueKeys(Option.apply(primaryKeys));
-        } else {
-            if (uniqueKeys.size() != 1) {
-                throw new IllegalArgumentException("JDBCUpsertTableSink should contain only one unique index");
-            } else if (uniqueKeys.size() == columnNames.length) {
-                throw new IllegalArgumentException("JDBCUpsertTableSink unique key size should less than total column size");
-            }
-
-            builder.uniqueKeys(Option.apply(uniqueKeys.iterator().next()));
+        if (!primaryKeys.isEmpty()) {
+            builder.primaryKeys(Option.apply(primaryKeys));
         }
 
-        builder.schema(schema);
+        if (!uniqueKeys.isEmpty()) {
+            builder.uniqueKeys(Option.apply(uniqueKeys));
+        }
+
+//        if (primaryKeys.isEmpty() && uniqueKeys.isEmpty()) {
+//            throw new IllegalArgumentException("JDBCUpsertTableSink should at least contain one primary key or one unique index");
+//        } else if (!primaryKeys.isEmpty()) {
+//            if (primaryKeys.size() == columnNames.length) {
+//                throw new IllegalArgumentException("JDBCUpsertTableSink primary key fields size should less than total column size");
+//            }
+//            builder.uniqueKeys(Option.apply(primaryKeys));
+//        } else {
+//            if (uniqueKeys.size() != 1) {
+//                throw new IllegalArgumentException("JDBCUpsertTableSink should contain only one unique index");
+//            } else if (uniqueKeys.size() == columnNames.length) {
+//                throw new IllegalArgumentException("JDBCUpsertTableSink unique key size should less than total column size");
+//            }
+//
+//            builder.uniqueKeys(Option.apply(uniqueKeys.iterator().next()));
+//        }
+
+        builder.schema(Option.apply(schema));
 
         return builder.build()
                 .configure(schema.getColumnNames(), schema.getColumnTypes());
@@ -166,7 +175,7 @@ public class PostgresTableFactory implements
     @SuppressWarnings("unchecked")
     @Override
     public StreamTableSink<BaseRow> createStreamTableSink(Map<String, String> properties) {
-        return (StreamTableSink<BaseRow>)createJDBCUpsertStreamTableSink(properties);
+        return (StreamTableSink<BaseRow>)createJDBCStreamTableSink(properties);
     }
 
     @Override

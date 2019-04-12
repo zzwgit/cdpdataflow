@@ -10,7 +10,7 @@ import org.apache.flink.streaming.api.checkpoint.ListCheckpointed
 import org.apache.flink.table.util.Logging
 import org.apache.flink.types.Row
 
-class JDBCUpsertSinkFunction(outputFormat: JDBCUpsertOutputFormat)
+class JDBCTableSinkFunction(outputFormat: JDBCBaseOutputFormat)
   extends RichSinkFunction[JTuple2[JBool, Row]]
   with ListCheckpointed[Row]
   with Logging{

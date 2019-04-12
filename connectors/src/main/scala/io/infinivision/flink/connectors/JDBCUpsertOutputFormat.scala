@@ -1,95 +1,42 @@
 package io.infinivision.flink.connectors
 
+import org.apache.flink.table.api.types.InternalType
+import java.util.{Set => JSet}
 import java.lang.{Boolean => JBool, Double => JDouble, Long => JLong}
 import java.lang.{Byte => JByte, Float => JFloat, Short => JShort}
 import java.sql.{Array => JArray, Date => JDate, Time => JTime, Timestamp => JTimestamp}
-import java.sql.{Connection, DriverManager, PreparedStatement, SQLException}
-import java.util.{Set => JSet}
 import java.math.{BigDecimal => JBigDecimal}
-
-import org.apache.flink.api.common.io.RichOutputFormat
-import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
-import org.apache.flink.configuration.Configuration
-import org.apache.flink.table.api.types.InternalType
-import org.apache.flink.table.util.Logging
 import org.apache.flink.types.Row
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.JavaConverters._
 
 class JDBCUpsertOutputFormat(
-    private val userName: String,
-    private val password: String,
-    private val driverName: String,
-    private val driverVersion: String,
-    private val dbURL: String,
-    private val tableName: String,
-    private val fieldNames: Array[String],
-    private val fieldTypes: Array[InternalType],
-    private val uniqueKeys: JSet[String])
-  extends RichOutputFormat[JTuple2[JBool, Row]]
-  with Logging {
+  private val userName: String,
+  private val password: String,
+  private val driverName: String,
+  private val driverVersion: String,
+  private val dbURL: String,
+  private val tableName: String,
+  private val fieldNames: Array[String],
+  private val fieldTypes: Array[InternalType],
+  private val uniqueKeys: JSet[String])
+  extends JDBCBaseOutputFormat(
+    userName,
+    password,
+    driverName,
+    driverVersion,
+    dbURL,
+    tableName,
+    fieldNames,
+    fieldTypes
+  ) {
 
-  private var dbConn: Connection = _
-  private var statement: PreparedStatement = _
-  private var batchCount: Int = 0
-  private var batchInterval: Int = 5000
-
-  override def configure(parameters: Configuration): Unit = {
-
-  }
-
-  private def establishConnection(): Unit = {
-    Class.forName(driverName)
-    if (userName == null) dbConn = DriverManager.getConnection(dbURL)
-    else dbConn = DriverManager.getConnection(dbURL, userName, password)
-  }
-
-  override def open(taskNumber: Int, numTasks: Int): Unit = {
-    establishConnection()
-    if (dbConn.getMetaData
-      .getTables(null, null, tableName, null)
-      .next()) {
-      // prepare the upsert sql
-      val sql = buildUpsertSQL
-      LOG.info(s"upsert sql $sql")
-      statement = dbConn.prepareStatement(sql)
-    } else {
-      throw new SQLException(s"table $tableName doesn't exist")
-    }
-  }
-
-  override def close(): Unit = {
-    LOG.info("close JDBCOutputFormat")
-    try {
-      if (statement != null) {
-        LOG.info("flush records")
-        flush()
-        statement.close()
-      }
-    } catch {
-      case ex: SQLException =>
-        LOG.error(s"JDBCUpsertOutputFormat could not be closed: ${ex.getMessage}")
-        throw new RuntimeException(ex)
-    } finally {
-      statement = null
-      batchCount = 0
-    }
-
-    try {
-      if (dbConn != null) {
-        dbConn.close()
-      }
-    } catch {
-      case ex: SQLException =>
-        LOG.error(s"JDBC Connection could not be closed: ${ex.getMessage}")
-        throw new RuntimeException(ex)
-    } finally {
-      dbConn = null
-    }
-  }
-
-  /** CREATE TABLE (
+  /** Build the update SQL for upsert operation
+    *
+    * Postgres handle upsert syntax are different before version 9.5 and after version 9.5(included)
+    *
+    * CREATE TABLE (
     *   aid varchar,
     *   uid varchar,
     *   label int
@@ -104,7 +51,7 @@ class JDBCUpsertOutputFormat(
     *
     * @return upsert sql statement
     */
-  private def buildUpsertSQL: String = {
+  override def prepareSql: String = {
     // build set placeholder
     val setPlaceHolder = fieldNames.foldLeft(ArrayBuffer[String]())(
       (buffer, field) => {
@@ -136,28 +83,7 @@ class JDBCUpsertOutputFormat(
     }
   }
 
-
-  override def writeRecord(record: JTuple2[JBool, Row]): Unit = {
-    if (record.f0) {
-      // write upsert record
-      updatePreparedStatement(record.f1)
-      statement.addBatch()
-      batchCount += 1
-      if (batchCount >= batchInterval) {
-        flush()
-      }
-    } else {
-      // do nothing so far
-    }
-
-  }
-
-  def flush(): Unit ={
-    statement.executeBatch()
-    batchCount = 0
-  }
-
-  private def updatePreparedStatement(row: Row): Unit = {
+  override def updatePreparedStatement(row: Row): Unit = {
     if (driverVersion == "9.4") {
       updatePreparedStatement94(row)
     } else {
@@ -310,69 +236,71 @@ class JDBCUpsertOutputFormat(
           if (updateFieldIndex.contains(index)) {
             statement.setLong(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
           }
-          statement.setLong(fieldSize + index + 1, f)
+          statement.setLong(index + 1, f)
         case f: JBigDecimal =>
           if (updateFieldIndex.contains(index)) {
             statement.setBigDecimal(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
           }
-          statement.setBigDecimal(fieldSize+index+1, f)
+          statement.setBigDecimal(index + 1, f)
         case f: Integer =>
           if (updateFieldIndex.contains(index)) {
             statement.setInt(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
           }
-          statement.setInt(fieldSize+index+1, f)
+          statement.setInt(index + 1, f)
         case f: JDouble =>
           if (updateFieldIndex.contains(index)) {
             statement.setDouble(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
           }
-          statement.setDouble(fieldSize+index+1, f)
+          statement.setDouble(index + 1, f)
         case f: JBool =>
           if (updateFieldIndex.contains(index)) {
             statement.setBoolean(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
           }
-          statement.setBoolean(fieldSize+index+1, f)
+          statement.setBoolean(index+1, f)
         case f: JFloat =>
           if (updateFieldIndex.contains(index)) {
             statement.setFloat(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
           }
-          statement.setFloat(fieldSize+index+1, f)
+          statement.setFloat(index+1, f)
         case f: JShort =>
           if (updateFieldIndex.contains(index)) {
             statement.setShort(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
           }
-          statement.setShort(fieldSize+index+1, f)
+          statement.setShort(index+1, f)
         case f: JByte =>
           if (updateFieldIndex.contains(index)) {
             statement.setByte(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
           }
-          statement.setByte(fieldSize+index+1, f)
+          statement.setByte(index+1, f)
         case f: JArray =>
           if (updateFieldIndex.contains(index)) {
             statement.setArray(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
           }
-          statement.setArray(fieldSize+index+1, f)
+          statement.setArray(index+1, f)
         case f: JDate =>
           if (updateFieldIndex.contains(index)) {
             statement.setDate(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
           }
-          statement.setDate(fieldSize+index+1, f)
+          statement.setDate(index+1, f)
         case f: JTime =>
           if (updateFieldIndex.contains(index)) {
             statement.setTime(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
           }
-          statement.setTime(fieldSize+index+1, f)
+          statement.setTime(index+1, f)
         case f: JTimestamp =>
           if (updateFieldIndex.contains(index)) {
             statement.setTimestamp(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
           }
-          statement.setTimestamp(fieldSize+index+1, f)
+          statement.setTimestamp(index+1, f)
         case _ =>
           if (updateFieldIndex.contains(index)) {
             statement.setObject(fieldSize + updateFieldIndex.indexOf(index) + 1, field)
           }
-          statement.setObject(fieldSize+index+1, field)
+          statement.setObject(index+1, field)
           LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
       }
     }
   }
+
+
 }
