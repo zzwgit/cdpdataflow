@@ -16,7 +16,7 @@ docker run --name postgres -e POSTGRES_PASSWORD=123456 -p 25432:5432 -d postgres
 
 ## Postgres Connector
 
-* table source ddl synx
+### table DDL
 ```sql
 CREATE TABLE tableName(
   columnName dataType,
@@ -30,15 +30,28 @@ CREATE TABLE tableName(
   ...
 )
 ```
-Note:
+
+
+### parameter description for dimension table and sink table
+| 名字  |   描述  | 必选  | 默认值  |
+| :--:  | :-----------:  | :------:  |    :------:    |
+| type  |   postgres (both)    |  true    |      no        |
+| version  |   (lower)9.4/9.5(upper)(both)     |  true    |      no        |
+| username  | DB username (both) |  true    |      no        |
+| tablename  | DB tablename (both) |  true    |      no        |
+| password  | db password (both)    |  true    |      no        |
+| dburl  | db connection url     |  true    |      no        |
+| updatemodde  | append/upsert(for sink table) |  false    |   upsert    |
+| cache  | none/LRU/ALL(for dimension table) |  false    |     none      |
+| cacheTTLms  | cache TTL(for dimension table) |  false    |    3600000     |
+| mode  | async/sync(for dimension table) |  false    |    async        |
+
+
+### Note:
 
 * 维表至少需要一个index在on条件中
-* 作为sink必须包含primary key或者unique index
+* 作为sink table时，在upsert模式下必须包含一个primary key或者unique index，append模式则不要求 所有记录append only
 
-### Properties description
-| type  | connector.version  | username  | password  | tablename  | dburl  | cache | cacheTTLms | mode |
-| :--:  | :---------------:  | :------:  | :------:  | :-------:  | :---:  | :---: | :--------: | :--: |
-| postgres  | 9.4  | 用户名  | 密码  | 表名  | 数据库连接URL | NONE,LRU,ALL | LRU cache TTL | async,sync |
 
 ### Temporal Table Join Example
 ```sql
@@ -73,7 +86,6 @@ create table train (
   path = 'file:///bigdata/datasets/train10.csv'
 );
 
-
 -- temporal table join sql query
 SELECT
 p.aid, p.uid, b.advertiser_id
@@ -82,6 +94,89 @@ INNER JOIN
 adfeature FOR SYSTEM_TIME AS OF PROCTIME() AS b
 ON p.aid = b.aid;
 
-### table sink ddl synx
+```
+
+### Table Sink Example(append mode)
+```sql
+-- create source table
+CREATE TABLE input (
+  aid VARCHAR NOT NULL,
+  advertiser_id VARCHAR NOT NULL,
+  campaign_id VARCHAR NOT NULL,
+  creative_id VARCHAR NOT NULL,
+  creative_size VARCHAR NOT NULL,
+  category_id VARCHAR NOT NULL,
+  product_id VARCHAR NOT NULL,
+  product_type VARCHAR NOT NULL,
+) WITH (
+  type = 'postgres',
+  version = '9.4',
+  username = 'postgres',
+  password = '123456',
+  tablename = 'adFeature',
+  dburl = 'jdbc:postgresql://localhost:5432/postgres'
+);
+
+-- create sink table
+create table output (
+  aid VARCHAR NOT NULL,
+  uid VARCHAR NOT NULL,
+  label VARCHAR NOT NULL
+) with (
+  type = 'postgres',
+  version = '9.4',
+  username = 'postgres',
+  password = '123456',
+  tablename = 'append_output',
+  dburl = 'jdbc:postgresql://localhost:5432/postgres',
+  updateMode = 'append'
+);
+
+INSERT INTO output
+SELECT aid, uid, label
+FROM input
+
+```
+
+### Table Sink Example(upsert mode)
+```sql
+-- create source table
+CREATE TABLE input (
+  aid VARCHAR NOT NULL,
+  advertiser_id VARCHAR NOT NULL,
+  campaign_id VARCHAR NOT NULL,
+  creative_id VARCHAR NOT NULL,
+  creative_size VARCHAR NOT NULL,
+  category_id VARCHAR NOT NULL,
+  product_id VARCHAR NOT NULL,
+  product_type VARCHAR NOT NULL,
+) WITH (
+  type = 'postgres',
+  version = '9.5',
+  username = 'postgres',
+  password = '123456',
+  tablename = 'adFeature',
+  dburl = 'jdbc:postgresql://localhost:5432/postgres'
+);
+
+-- create sink table
+create table output (
+  aid VARCHAR NOT NULL,
+  count BIGINT NOT NULL
+) with (
+  type = 'postgres',
+  version = '9.5',
+  username = 'postgres',
+  password = '123456',
+  tablename = 'append_output',
+  dburl = 'jdbc:postgresql://localhost:5432/postgres',
+  updateMode = 'append',
+  PRIMARY KEY('aid') -- 或者 UNIQUE INDEX("aid") 必填
+);
+
+INSERT INTO output
+SELECT aid, count(uid)
+FROM input
+GROUP BY aid
 
 ```
