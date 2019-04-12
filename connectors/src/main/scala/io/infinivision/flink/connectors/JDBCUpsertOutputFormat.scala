@@ -67,7 +67,7 @@ class JDBCUpsertOutputFormat(
     val conditionPlaceHolder = uniqueKeys.asScala.map( _ + "=?").mkString(" and ")
 
     // select placeholder
-    val selectPlaceholder = Array.fill[String](fieldNames.length)("?").mkString(",")
+    val selectPlaceholder = fieldNames.map{ _ => "?" }.mkString(",")
 
     // build SQL
     if (driverVersion == "9.5") {

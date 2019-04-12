@@ -27,8 +27,7 @@ class JDBCAppendOutputFormat(
     fieldTypes) {
 
   override def prepareSql: String = {
-    val selectPlaceholder = Array.fill[String](fieldNames.length)("?").mkString(",")
-
+    val selectPlaceholder = fieldNames.map{ _ => "?" }.mkString(",")
     s"""
       |INSERT INTO $tableName VALUES ($selectPlaceholder)
     """.stripMargin
