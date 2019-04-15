@@ -69,6 +69,7 @@ public class JDBCTableOptions {
             CACHE.key(),
             CACHE_TTL.key(),
             MODE.key(),
+            UPDATE_MODE.key(),
             BUFFER_CAPACITY.key(),
             TIMEOUT.key()
     );
