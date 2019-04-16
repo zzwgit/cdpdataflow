@@ -33,7 +33,7 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
 
     private final static int DEFAULT_VERTX_EVENT_LOOP_POOL_SIZE = 1;
 
-    private final static int DEFAULT_VERTX_WORKER_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
+    private final static int DEFAULT_VERTX_WORKER_POOL_SIZE = Math.min(Runtime.getRuntime().availableProcessors(), 4) * 2;
 
     private final static int DEFAULT_MAX_DB_CONN_POOL_SIZE = DEFAULT_VERTX_EVENT_LOOP_POOL_SIZE + DEFAULT_VERTX_WORKER_POOL_SIZE;
 
