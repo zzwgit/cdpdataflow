@@ -20,7 +20,9 @@ import org.apache.flink.table.util.TableProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
     private static final Logger LOG = LoggerFactory.getLogger(PostgresAsyncLookupFunction.class);
@@ -33,7 +35,7 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
 
     private final static int DEFAULT_VERTX_EVENT_LOOP_POOL_SIZE = 1;
 
-    private final static int DEFAULT_VERTX_WORKER_POOL_SIZE = Math.min(Runtime.getRuntime().availableProcessors(), 4) * 2;
+    private final static int DEFAULT_VERTX_WORKER_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
 
     private final static int DEFAULT_MAX_DB_CONN_POOL_SIZE = DEFAULT_VERTX_EVENT_LOOP_POOL_SIZE + DEFAULT_VERTX_WORKER_POOL_SIZE;
 
@@ -90,14 +92,15 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
 
                 int resultSize = rs.result().getResults().size();
                 GenericRow reuseRow = new GenericRow(returnType.getArity());
-
+                List<BaseRow> results = new ArrayList<>();
                 if (resultSize > 0) {
                     for (JsonArray line : rs.result().getResults()) {
                         for (int pos = 0; pos < reuseRow.getArity(); pos++) {
                             reuseRow.update(pos, line.getValue(pos));
                         }
-                        resultFuture.complete(Collections.singleton(reuseRow));
+                        results.add(reuseRow);
                     }
+                    resultFuture.complete(results);
                 } else {
                     resultFuture.complete(Collections.emptyList());
                 }
