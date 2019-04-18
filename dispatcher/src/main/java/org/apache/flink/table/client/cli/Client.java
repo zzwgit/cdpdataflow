@@ -1,5 +1,6 @@
 package org.apache.flink.table.client.cli;
 
+import io.infinivision.flink.client.LocalExecutorExtend;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.client.SqlClientException;
 import org.apache.flink.table.client.cli.SqlCommandParser.SqlCommandCall;
@@ -19,11 +20,11 @@ public class Client {
 
 	private static final Logger LOG = LoggerFactory.getLogger(Client.class);
 
-	private final Executor executor;
+	private final LocalExecutorExtend executor;
 
 	private final SessionContext context;
 
-	public Client(SessionContext context, Executor executor) {
+	public Client(SessionContext context, LocalExecutorExtend executor) {
 		this.context = context;
 		this.executor = executor;
 	}
@@ -44,7 +45,7 @@ public class Client {
 		return parsedLine;
 	}
 
-	private void callCommand(SqlCommandCall cmdCall) {
+	public void callCommand(SqlCommandCall cmdCall) {
 		switch (cmdCall.command) {
 		case RESET:
 			callReset();
@@ -88,6 +89,9 @@ public class Client {
 			break;
 		case CREATE_FUNCTION:
 			callCreateFunction(cmdCall);
+			break;
+		case COMMIT:
+			callCommitJob(cmdCall);
 			break;
 		default:
 			throw new SqlClientException("Unsupported command: " + cmdCall.command);
@@ -196,12 +200,10 @@ public class Client {
 	}
 
 	private boolean callInsertInto(SqlCommandCall cmdCall) {
-		printInfo(CliStrings.MESSAGE_SUBMITTING_STATEMENT);
 
 		try {
 			final ProgramTargetDescriptor programTarget = executor.executeUpdate(context, cmdCall.operands[0]);
-			printInfo(CliStrings.MESSAGE_STATEMENT_SUBMITTED);
-			printInfo(programTarget.toString());
+			printInfo("InsertInto has been created.");
 		} catch (SqlExecutionException e) {
 			printExecutionException(e);
 			return false;
@@ -254,6 +256,15 @@ public class Client {
 			// rollback change
 			context.addView(view);
 			printExecutionException(CliStrings.MESSAGE_VIEW_NOT_REMOVED, e);
+		}
+	}
+
+	private void callCommitJob(SqlCommandCall cmdCall) {
+		try {
+			executor.commitJob(context, cmdCall.operands[0]);
+			printInfo(CliStrings.MESSAGE_VIEW_CREATED);
+		} catch (SqlExecutionException e) {
+			printExecutionException(e);
 		}
 	}
 

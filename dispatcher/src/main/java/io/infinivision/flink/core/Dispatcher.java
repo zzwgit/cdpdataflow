@@ -1,6 +1,7 @@
 package io.infinivision.flink.core;
 
 import com.google.common.collect.Maps;
+import io.infinivision.flink.client.LocalExecutorExtend;
 import io.infinivision.flink.entity.CheckPointEntity;
 import io.infinivision.flink.entity.ContextInfoEntity;
 import io.infinivision.flink.handler.EnvHandler;
@@ -20,6 +21,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public class Dispatcher {
 
@@ -62,11 +64,11 @@ public class Dispatcher {
         // SessionContext
         Environment sessionEnv = null == environment ? new Environment() : Environment.parse(environment);
 
-        // fromsavepoints
+        // fromsavepoints (ps:ConfigUtil.normalizeYaml中会将key转换为小写)
         if (StringUtils.isNotEmpty(fromSavepoint)) {
             Map<String, Object> sp = Maps.newHashMap();
-            sp.put("fromSavepoint", fromSavepoint);
-            sp.put("allowNonRestoredState", "true");
+            sp.put("-s", fromSavepoint);
+            sp.put("-n", "true");
             sp.putAll(sessionEnv.getDeployment().asMap());
             sessionEnv.setDeployment(sp);
         }
@@ -74,11 +76,12 @@ public class Dispatcher {
         SessionContext sessionContext = new SessionContext(sessionId, sessionEnv);
 
         // Executor
-        Executor executor = new LocalExecutor(defaults, jars, libDirs);
+//        LocalExecutor executor = new LocalExecutor(defaults, jars, libDirs);
+        LocalExecutorExtend executor = new LocalExecutorExtend(defaults, jars, libDirs);
         executor.validateSession(sessionContext);
 
         // sql
-        String sql = readLocal(sqlPath);
+        String sql = trimSql(readLocal(sqlPath));
 
         return new ContextInfoEntity(checkPointEntity, executor, sessionContext, sql);
 
@@ -105,6 +108,19 @@ public class Dispatcher {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public String trimSql(String sql) {
+        //去除注释
+        Pattern p = Pattern.compile("(?ms)('(?:''|[^'])*')|--.*?$|/\\*.*?\\*/|#.*?$|");
+        sql = p.matcher(sql).replaceAll("$1");
+        //去除结尾多余行
+        sql = sql.trim();
+        //去除结尾;
+        if (sql.endsWith(";")) {
+            sql = sql.substring(0, sql.length() - 1).trim();
+        }
+        return sql;
     }
 
 //    public String readHdfs(String path) {

@@ -61,7 +61,7 @@ public class OptionsParser {
             .numberOfArgs(1)
             .argName("checkpoint url")
             .desc(
-                    "The identifier for a session. 'default' is the default identifier.")
+                    "")
             .build();
 
     public static final Option OPTION_FROMSAVEPOINT = Option

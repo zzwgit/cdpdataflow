@@ -30,12 +30,13 @@ public class EnvHandler {
         if (null == checkPointEntity || null == checkPointEntity.getIntervalTime() || checkPointEntity.getIntervalTime() <= 0) {
             return;
         }
-        // ExecutionContext<?> executionContext =
-        // executor.getOrCreateExecutionContext(sessionContext);
-        Method executorMethod = contextInfo.getExecutor().getClass().getDeclaredMethod("getOrCreateExecutionContext",
-                SessionContext.class);
-        executorMethod.setAccessible(true);
-        ExecutionContext<?> executionContext = (ExecutionContext<?>) executorMethod.invoke(contextInfo.getExecutor(), contextInfo.getSessionContext());
+
+        ExecutionContext<?> executionContext =
+                contextInfo.getExecutor().getOrCreateExecutionContext(contextInfo.getSessionContext());
+//        Method executorMethod = contextInfo.getExecutor().getClass().getDeclaredMethod("getOrCreateExecutionContext",
+//                SessionContext.class);
+//        executorMethod.setAccessible(true);
+//        ExecutionContext<?> executionContext = (ExecutionContext<?>) executorMethod.invoke(contextInfo.getExecutor(), contextInfo.getSessionContext());
         ExecutionContext.EnvironmentInstance envInst = executionContext.createEnvironmentInstance();
         StreamExecutionEnvironment env = envInst.getStreamExecutionEnvironment();
 

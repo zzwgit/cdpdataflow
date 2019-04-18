@@ -13,8 +13,7 @@ public class SqlHandler {
 
     private static SqlHandler INSTANCE = null;
 
-    public static synchronized SqlHandler getInstance()
-    {
+    public static synchronized SqlHandler getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new SqlHandler();
         }
@@ -24,22 +23,17 @@ public class SqlHandler {
     public void handleSql(ContextInfoEntity contextInfo) throws NoSuchMethodException {
 
         Client cli = new Client(contextInfo.getSessionContext(), contextInfo.getExecutor());
-        Method method = cli.getClass().getDeclaredMethod("callCommand", SqlCommandParser.SqlCommandCall.class);
-        method.setAccessible(true);
+//        Method method = cli.getClass().getDeclaredMethod("callCommand", SqlCommandParser.SqlCommandCall.class);
+//        method.setAccessible(true);
 
         String sql = contextInfo.getSql();
 
         for (String s : StringUtils.split(sql, ";")) {
 
             Optional<SqlCommandParser.SqlCommandCall> cmdCall = SqlCommandParser.parse(s);
-            try {
-                method.invoke(cli, cmdCall.get());
-                System.err.println("-----------------------------------------");
-                System.err.println("finished execute : ");
-                System.err.println("-----------------------------------------");
-            } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-                e.printStackTrace();
-            }
+//                method.invoke(cli, cmdCall.get());
+            cli.callCommand(cmdCall.get());
+            System.err.println("--------------------finished execute---------------------");
         }
 
     }

@@ -55,7 +55,7 @@ public class CheckPointEntity {
     }
 
     public CheckpointingMode getCheckpointingMode() {
-        return CheckpointingMode.EXACTLY_ONCE.equals(mode) ? CheckpointingMode.EXACTLY_ONCE : CheckpointingMode.AT_LEAST_ONCE;
+        return CheckpointingMode.EXACTLY_ONCE.name().equals(mode) ? CheckpointingMode.EXACTLY_ONCE : CheckpointingMode.AT_LEAST_ONCE;
     }
 
     public String getMode() {
