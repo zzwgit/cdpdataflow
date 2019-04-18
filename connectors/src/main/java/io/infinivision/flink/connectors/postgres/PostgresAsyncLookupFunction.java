@@ -7,6 +7,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.SQLClient;
 import io.vertx.ext.sql.SQLConnection;
+import io.vertx.ext.sql.SQLOptions;
 import org.apache.flink.api.java.io.jdbc.JDBCOptions;
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
 import org.apache.flink.table.api.functions.AsyncTableFunction;
@@ -35,7 +36,12 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
 
     private final static int DEFAULT_VERTX_EVENT_LOOP_POOL_SIZE = 1;
 
-    private final static int DEFAULT_VERTX_WORKER_POOL_SIZE = Runtime.getRuntime().availableProcessors() * 2;
+    // QUERY TIMEOUT 必须小于 AsyncWaitOperator record entry的timeout时间
+    // 目前 AsyncWaitOperator timeout = 10s
+    // 否则 JDBCConnection不会被释放
+    private final static int DEFAULT_QUERY_TIMEOUT = 5;
+
+    private final static int DEFAULT_VERTX_WORKER_POOL_SIZE = Math.min(Runtime.getRuntime().availableProcessors(), 4) * 2;
 
     private final static int DEFAULT_MAX_DB_CONN_POOL_SIZE = DEFAULT_VERTX_EVENT_LOOP_POOL_SIZE + DEFAULT_VERTX_WORKER_POOL_SIZE;
 
@@ -62,6 +68,9 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
         vo.setWorkerPoolSize(DEFAULT_VERTX_WORKER_POOL_SIZE);
         this.vertx = Vertx.vertx(vo);
         this.SQLClient = JDBCClient.createNonShared(vertx, pgConfig);
+        LOG.info("open PostgresAsyncLookupFunction");
+        LOG.info("Vertx configuration - max_pool_size: {}. default query timeout: {}",
+                DEFAULT_MAX_DB_CONN_POOL_SIZE, DEFAULT_QUERY_TIMEOUT);
     }
 
 
@@ -79,14 +88,16 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
         SQLClient.getConnection(conn -> {
             if (conn.failed()) {
                 //Treatment failures
+                LOG.error("Postgres Vertx Connection Failed: " + conn.cause());
                 resultFuture.completeExceptionally(conn.cause());
                 return;
             }
-            final SQLConnection connection = conn.result();
+            final SQLConnection connection = conn.result()
+                    .setOptions(new SQLOptions().setQueryTimeout(DEFAULT_QUERY_TIMEOUT));
+
             connection.queryWithParams(queryTemplate, inputParams, rs -> {
                 if (rs.failed()) {
-//                    LOG.error("can not retrive the data from the datase", rs.cause());
-//                    resultFuture.complete(null);
+                    LOG.error("Postgres SQL Query Error: " + rs.cause());
                     throw new RuntimeException(rs.cause());
                 }
 
@@ -107,6 +118,7 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
 
                 connection.close(done -> {
                     if (done.failed()) {
+                        LOG.error("close connection failed: " + done.cause());
                         throw new RuntimeException(done.cause());
                     }
                 });
@@ -123,8 +135,11 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
 
     @Override
     public void close() throws Exception {
+        LOG.info("Close PostgresAsyncLookupFunction");
         super.close();
         if (SQLClient != null) {
+            LOG.info("Close SQLClient");
+
             SQLClient.close(done -> {
                 if (done.failed()) {
                     throw new RuntimeException(done.cause());
@@ -133,11 +148,13 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> {
         }
 
         if (vertx != null) {
+            LOG.info("Close vertx");
             vertx.close(done -> {
                 if (done.failed()) {
                     throw new RuntimeException(done.cause());
                 }
             });
         }
+
     }
 }
