@@ -28,9 +28,9 @@ import java.util.regex.Pattern;
 /**
  * Simple parser for determining the type of command and its parameters.
  */
-public final class SqlCommandParser {
+public final class SqlCommandParserExtend {
 
-    private SqlCommandParser() {
+    private SqlCommandParserExtend() {
         // private
     }
 

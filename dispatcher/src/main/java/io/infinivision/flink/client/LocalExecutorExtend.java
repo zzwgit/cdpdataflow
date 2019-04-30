@@ -18,6 +18,8 @@
 
 package io.infinivision.flink.client;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import org.apache.commons.cli.Options;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -25,6 +27,7 @@ import org.apache.flink.client.cli.CliFrontend;
 import org.apache.flink.client.cli.CliFrontendParser;
 import org.apache.flink.client.cli.CustomCommandLine;
 import org.apache.flink.client.deployment.ClusterDescriptor;
+import org.apache.flink.client.deployment.ClusterRetrieveException;
 import org.apache.flink.client.program.ClusterClient;
 import org.apache.flink.client.program.JobWithJars;
 import org.apache.flink.configuration.Configuration;
@@ -32,6 +35,9 @@ import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.runtime.jobgraph.JobStatus;
+import org.apache.flink.runtime.jobgraph.JobVertexID;
+import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.sql.parser.ddl.SqlCreateFunction;
 import org.apache.flink.sql.parser.ddl.SqlCreateTable;
 import org.apache.flink.sql.parser.ddl.SqlCreateView;
@@ -66,7 +72,9 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * Executor that performs the Flink communication locally. The calls are blocking depending on the
@@ -555,6 +563,65 @@ public class LocalExecutorExtend implements Executor {
                 result.isMaterialized());
     }
 
+    public <T> void modify(SessionContext session, String requestBody) throws Exception {
+        final ExecutionContext<T> context = (ExecutionContext<T>) getOrCreateExecutionContext(session);
+        final ClusterDescriptor<T> clusterDescriptor = context.createClusterDescriptor();
+        final T clusterId = context.getClusterId();
+        ClusterClient<T> clusterClient = clusterDescriptor.retrieve(clusterId);
+
+        JSONObject request = (JSONObject)JSON.parse(requestBody);
+        JobID jobId = JobID.fromHexString((String)request.get("jobid"));
+        Map<String,String> vertexs = (Map<String,String>)request.get("vertex-parallelism-resource");
+
+        List<JobVertexID> jobVertexIDs =vertexs.keySet().stream().map((vertexId) -> {
+            return JobVertexID.fromHexString(vertexId);
+        }).collect(Collectors.toList());
+
+        List<Integer> parallelisms = vertexs.values().stream().map((parallelism) -> {
+            return Integer.parseInt(parallelism);
+        }).collect(Collectors.toList());
+
+        try {
+            CompletableFuture<Acknowledge> rescaleFuture = clusterClient.updateJob(
+                    jobId,
+                    jobVertexIDs,
+                    parallelisms);
+            rescaleFuture.get();
+        } finally {
+            try {
+                if (clusterClient != null) {
+                    clusterClient.shutdown();
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+
+    }
+
+    public <T> JobStatus getJobStatus(SessionContext session, String requestBody) throws Exception {
+        final ExecutionContext<T> context = (ExecutionContext<T>) getOrCreateExecutionContext(session);
+        final ClusterDescriptor<T> clusterDescriptor = context.createClusterDescriptor();
+        final T clusterId = context.getClusterId();
+        ClusterClient<T> clusterClient = clusterDescriptor.retrieve(clusterId);
+
+        JSONObject request = (JSONObject)JSON.parse(requestBody);
+        JobID jobId = JobID.fromHexString((String)request.get("jobid"));
+
+        try {
+            CompletableFuture<JobStatus> resutlFuture = clusterClient.getJobStatus(jobId);
+            return resutlFuture.get();
+        } finally {
+            try {
+                if (clusterClient != null) {
+                    clusterClient.shutdown();
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+    }
+
     /**
      *
      * @param session
@@ -689,6 +756,7 @@ public class LocalExecutorExtend implements Executor {
     private static Options collectCommandLineOptions(List<CustomCommandLine<?>> commandLines) {
         final Options customOptions = new Options();
         for (CustomCommandLine<?> customCommandLine : commandLines) {
+            customCommandLine.addGeneralOptions(customOptions);
             customCommandLine.addRunOptions(customOptions);
         }
         return CliFrontendParser.mergeOptions(

@@ -1,9 +1,10 @@
 package org.apache.flink.table.client.cli;
 
 import io.infinivision.flink.client.LocalExecutorExtend;
+import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.client.SqlClientException;
-import org.apache.flink.table.client.cli.SqlCommandParser.SqlCommandCall;
+import org.apache.flink.table.client.cli.SqlCommandParserExtend.SqlCommandCall;
 import org.apache.flink.table.client.config.entries.ViewEntry;
 import org.apache.flink.table.client.gateway.*;
 import org.slf4j.Logger;
@@ -38,7 +39,7 @@ public class Client {
 	}
 
 	private Optional<SqlCommandCall> parseCommand(String line) {
-		final Optional<SqlCommandCall> parsedLine = SqlCommandParser.parse(line);
+		final Optional<SqlCommandCall> parsedLine = SqlCommandParserExtend.parse(line);
 		if (!parsedLine.isPresent()) {
 			printError(CliStrings.MESSAGE_UNKNOWN_SQL);
 		}
@@ -261,10 +262,30 @@ public class Client {
 
 	private void callCommitJob(SqlCommandCall cmdCall) {
 		try {
-			executor.commitJob(context, cmdCall.operands[0]);
-			printInfo(CliStrings.MESSAGE_VIEW_CREATED);
+			ProgramTargetDescriptor result = executor.commitJob(context, cmdCall.operands[0]);
+			printInfo("---------------------------------------------------------------------------------------");
+			printInfo("commit with:"+result.toString());
 		} catch (SqlExecutionException e) {
 			printExecutionException(e);
+		}
+	}
+
+	// modify --------------------------------------------------------------------------------------------
+	public void callModify(String requestBody) {
+		try {
+			executor.modify(context, requestBody);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void callGetJobStatus(String requestBody) {
+		try {
+            JobStatus jobStatus =executor.getJobStatus(context, requestBody);
+            printInfo("---------------------------------------------------------------------------------------");
+            printInfo("job is:"+jobStatus.toString());
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 

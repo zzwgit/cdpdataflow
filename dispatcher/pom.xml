@@ -108,6 +108,12 @@ under the License.
                     <scope>compile</scope>
                 </dependency>
 
+                <dependency>
+                    <groupId>com.alibaba.blink</groupId>
+                    <artifactId>flink-yarn-shuffle</artifactId>
+                    <version>${flink.version}</version>
+                </dependency>
+
                 <!--add scala package-->
                 <dependency>
                     <groupId>com.alibaba.blink</groupId>
