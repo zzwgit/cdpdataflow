@@ -659,7 +659,7 @@ public class LocalExecutorExtend implements Executor {
         deployer.run();
 
         return ProgramTargetDescriptor.of(
-                result.getClusterId(),
+                result.getClusterId().toString(),
                 jobGraph.getJobID(),
                 result.getWebInterfaceUrl());
     }
