@@ -24,6 +24,16 @@ public class OptionsParser {
                     "sql path")
             .build();
 
+    public static final Option OPTION_CP_PATH = Option
+            .builder("checkpointPath")
+            .required(false)
+            .longOpt("checkpointPath")
+            .numberOfArgs(1)
+            .argName("checkpoint path")
+            .desc(
+                    "checkpoint path")
+            .build();
+
     public static final Option OPTION_CP_INTERVALTIME = Option
             .builder("intervalTime")
             .required(false)
@@ -85,6 +95,7 @@ public class OptionsParser {
         //sqlPath
         options.addOption(OptionsParser.OPTION_SQLPATH);
         //checkPoint{intervalTime mode stateBackend checkpointDataUri}
+        options.addOption(OptionsParser.OPTION_CP_PATH);
         options.addOption(OptionsParser.OPTION_CP_INTERVALTIME);
         options.addOption(OptionsParser.OPTION_CP_MODE);
         options.addOption(OptionsParser.OPTION_CP_STATEBACKEND);

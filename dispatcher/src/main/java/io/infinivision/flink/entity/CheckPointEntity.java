@@ -7,18 +7,18 @@ import java.math.BigDecimal;
 
 public class CheckPointEntity {
 
-    private Long intervalTime;
-    private Long minPauseBetweenCheckpoints;
-    private Long checkpointTimeout;
-    private String mode;
-    private Boolean enableExternalizedCheckpoint;
+    private Long intervalTime = -1L;
+    private Long minPauseBetweenCheckpoints = 0L;
+    private Long checkpointTimeout = 0L;
+    private String mode = "AT_LEAST_ONCE";
+    private Boolean enableExternalizedCheckpoint = false;
     private String stateBackend;
-    private String checkpointDataUri;
+    private String stateCheckpointsDir;
 
     public CheckPointEntity() {
     }
 
-    public CheckPointEntity(Long intervalTime, String mode, String stateBackend, String checkpointDataUri) {
+    public CheckPointEntity(Long intervalTime, String mode, String stateBackend, String stateCheckpointsDir) {
         if (null != intervalTime && intervalTime.longValue() > 0) {
             this.intervalTime = intervalTime;
             this.minPauseBetweenCheckpoints = null != intervalTime && intervalTime > 0 ? intervalTime / 10 : 0;
@@ -26,7 +26,7 @@ public class CheckPointEntity {
             this.mode = mode;
             this.enableExternalizedCheckpoint = intervalTime > 0;
             this.stateBackend = stateBackend;
-            this.checkpointDataUri = checkpointDataUri;
+            this.stateCheckpointsDir = stateCheckpointsDir;
         }
     }
 
@@ -82,12 +82,12 @@ public class CheckPointEntity {
         this.stateBackend = stateBackend;
     }
 
-    public String getCheckpointDataUri() {
-        return checkpointDataUri;
+    public String getsStateCheckpointsDir() {
+        return stateCheckpointsDir;
     }
 
-    public void setCheckpointDataUri(String checkpointDataUri) {
-        this.checkpointDataUri = checkpointDataUri;
+    public void setStateCheckpointsDir(String stateCheckpointsDir) {
+        this.stateCheckpointsDir = stateCheckpointsDir;
     }
 
     @Override
@@ -99,7 +99,7 @@ public class CheckPointEntity {
                 ", mode='" + mode + '\'' +
                 ", enableExternalizedCheckpoint=" + enableExternalizedCheckpoint +
                 ", stateBackend='" + stateBackend + '\'' +
-                ", checkpointDataUri='" + checkpointDataUri + '\'' +
+                ", stateCheckpointsDir='" + stateCheckpointsDir + '\'' +
                 '}';
     }
 }

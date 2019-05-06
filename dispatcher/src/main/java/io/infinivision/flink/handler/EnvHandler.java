@@ -53,7 +53,7 @@ public class EnvHandler {
             config.enableExternalizedCheckpoints(CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
 
             String stateBackend = checkPointEntity.getStateBackend();
-            String checkpointDataUri = checkPointEntity.getCheckpointDataUri();
+            String checkpointDataUri = checkPointEntity.getsStateCheckpointsDir();
 
             //TODO
             switch (stateBackend) {

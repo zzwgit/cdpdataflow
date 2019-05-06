@@ -1,5 +1,6 @@
 package io.infinivision.flink.core;
 
+import com.alibaba.fastjson.JSON;
 import com.google.common.collect.Maps;
 import io.infinivision.flink.client.LocalExecutorExtend;
 import io.infinivision.flink.entity.CheckPointEntity;
@@ -91,9 +92,12 @@ public class Dispatcher {
         List<URL> jars = OptionsParser.checkUrls(commandLine, CliOptionsParser.OPTION_JAR);
         //libs
         List<URL> libDirs = OptionsParser.checkUrls(commandLine, CliOptionsParser.OPTION_LIBRARY);
+
         //checkpoint
-        String interval = commandLine.getOptionValue(OptionsParser.OPTION_CP_INTERVALTIME.getOpt(), "-1");
-        CheckPointEntity checkPointEntity = new CheckPointEntity(Long.parseLong(interval), commandLine.getOptionValue(OptionsParser.OPTION_CP_MODE.getOpt()), commandLine.getOptionValue(OptionsParser.OPTION_CP_STATEBACKEND.getOpt()), commandLine.getOptionValue(OptionsParser.OPTION_CP_STATECHECKPOINTSDIR.getOpt()));
+        String checkpointPath = commandLine.getOptionValue(OptionsParser.OPTION_CP_PATH.getOpt());
+        CheckPointEntity checkPointEntity = JSON.parseObject(readFile(checkpointPath), CheckPointEntity.class);
+//        String interval = commandLine.getOptionValue(OptionsParser.OPTION_CP_INTERVALTIME.getOpt(), "-1");
+//        CheckPointEntity checkPointEntity = new CheckPointEntity(Long.parseLong(interval), commandLine.getOptionValue(OptionsParser.OPTION_CP_MODE.getOpt()), commandLine.getOptionValue(OptionsParser.OPTION_CP_STATEBACKEND.getOpt()), commandLine.getOptionValue(OptionsParser.OPTION_CP_STATECHECKPOINTSDIR.getOpt()));
 
         //fromSavepoint
         String fromSavepoint = commandLine.getOptionValue(OptionsParser.OPTION_FROMSAVEPOINT.getOpt());
@@ -141,6 +145,10 @@ public class Dispatcher {
      * @return
      */
     public String readFile(String path) {
+
+        if(StringUtils.isEmpty(path)){
+            return null;
+        }
 
         FileSystem fs = null;
         InputStream in = null;
