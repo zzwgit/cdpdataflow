@@ -94,7 +94,7 @@ public class Dispatcher {
         List<URL> libDirs = OptionsParser.checkUrls(commandLine, CliOptionsParser.OPTION_LIBRARY);
 
         //checkpoint
-        String checkpointPath = commandLine.getOptionValue(OptionsParser.OPTION_CP_PATH.getOpt());
+        String checkpointPath = commandLine.getOptionValue(OptionsParser.OPTION_CONF_PATH.getOpt());
         CheckPointEntity checkPointEntity = JSON.parseObject(readFile(checkpointPath), CheckPointEntity.class);
 //        String interval = commandLine.getOptionValue(OptionsParser.OPTION_CP_INTERVALTIME.getOpt(), "-1");
 //        CheckPointEntity checkPointEntity = new CheckPointEntity(Long.parseLong(interval), commandLine.getOptionValue(OptionsParser.OPTION_CP_MODE.getOpt()), commandLine.getOptionValue(OptionsParser.OPTION_CP_STATEBACKEND.getOpt()), commandLine.getOptionValue(OptionsParser.OPTION_CP_STATECHECKPOINTSDIR.getOpt()));
