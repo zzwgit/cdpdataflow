@@ -1,5 +1,6 @@
 package io.infinivision.flink.entity;
 
+import io.infinivision.flink.client.LocalExecutorExtend;
 import org.apache.flink.table.client.gateway.Executor;
 import org.apache.flink.table.client.gateway.SessionContext;
 
@@ -7,7 +8,7 @@ public class ContextInfoEntity {
 
     private CheckPointEntity checkPointEntity;
 
-    private Executor executor;
+    private LocalExecutorExtend executor;
 
     private SessionContext sessionContext;
 
@@ -20,7 +21,7 @@ public class ContextInfoEntity {
         this.checkPointEntity = checkPointEntity;
     }
 
-    public ContextInfoEntity(CheckPointEntity checkPointEntity, Executor executor, SessionContext sessionContext, String sql) {
+    public ContextInfoEntity(CheckPointEntity checkPointEntity, LocalExecutorExtend executor, SessionContext sessionContext, String sql) {
         this.checkPointEntity = checkPointEntity;
         this.executor = executor;
         this.sessionContext = sessionContext;
@@ -35,11 +36,11 @@ public class ContextInfoEntity {
         this.checkPointEntity = checkPointEntity;
     }
 
-    public Executor getExecutor() {
+    public LocalExecutorExtend getExecutor() {
         return executor;
     }
 
-    public void setExecutor(Executor executor) {
+    public void setExecutor(LocalExecutorExtend executor) {
         this.executor = executor;
     }
 

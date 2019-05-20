@@ -24,6 +24,16 @@ public class OptionsParser {
                     "sql path")
             .build();
 
+    public static final Option OPTION_CONF_PATH = Option
+            .builder("confPath")
+            .required(false)
+            .longOpt("confPath")
+            .numberOfArgs(1)
+            .argName("conf path")
+            .desc(
+                    "conf path")
+            .build();
+
     public static final Option OPTION_CP_INTERVALTIME = Option
             .builder("intervalTime")
             .required(false)
@@ -61,7 +71,7 @@ public class OptionsParser {
             .numberOfArgs(1)
             .argName("checkpoint url")
             .desc(
-                    "The identifier for a session. 'default' is the default identifier.")
+                    "")
             .build();
 
     public static final Option OPTION_FROMSAVEPOINT = Option
@@ -84,6 +94,8 @@ public class OptionsParser {
         options.addOption(CliOptionsParser.OPTION_LIBRARY);
         //sqlPath
         options.addOption(OptionsParser.OPTION_SQLPATH);
+        //confPath
+        options.addOption(OptionsParser.OPTION_CONF_PATH);
         //checkPoint{intervalTime mode stateBackend checkpointDataUri}
         options.addOption(OptionsParser.OPTION_CP_INTERVALTIME);
         options.addOption(OptionsParser.OPTION_CP_MODE);

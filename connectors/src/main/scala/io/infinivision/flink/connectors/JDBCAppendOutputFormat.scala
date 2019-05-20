@@ -66,7 +66,7 @@ class JDBCAppendOutputFormat(
           statement.setTimestamp(index+1, f)
         case _ =>
           statement.setObject(index+1, field)
-          LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
+          //LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
       }
     }
   }

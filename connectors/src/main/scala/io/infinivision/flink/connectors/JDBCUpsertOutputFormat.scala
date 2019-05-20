@@ -215,7 +215,7 @@ class JDBCUpsertOutputFormat(
             statement.setObject(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field)
           }
           statement.setObject(fieldSize+index+1, field)
-          LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
+//          LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
       }
     }
   }
@@ -299,7 +299,7 @@ class JDBCUpsertOutputFormat(
             statement.setObject(fieldSize + updateFieldIndex.indexOf(index) + 1, field)
           }
           statement.setObject(index+1, field)
-          LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
+//          LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
       }
     }
   }
