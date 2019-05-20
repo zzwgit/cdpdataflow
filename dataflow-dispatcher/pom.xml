@@ -18,50 +18,40 @@ under the License.
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-
     <parent>
+        <artifactId>cdpdataflow</artifactId>
         <groupId>io.infinivision.flink</groupId>
-        <artifactId>ruleengine</artifactId>
         <version>1.0</version>
     </parent>
+    <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>connectors</artifactId>
-    <name>connectors</name>
+    <artifactId>dataflow-dispatcher</artifactId>
+    <packaging>jar</packaging>
+
+    <name>dataflow-dispatcher</name>
+    <url>http://www.myorganization.org</url>
 
     <properties>
-        <postgres.connector.version>9.4.1212</postgres.connector.version>
-        <vertx.version>3.5.4</vertx.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencies>
-
         <dependency>
-            <groupId>com.alibaba.blink</groupId>
-            <artifactId>flink-jdbc</artifactId>
-            <version>${flink.version}</version>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
         </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
         <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>${postgres.connector.version}</version>
+            <groupId>commons-beanutils</groupId>
+            <artifactId>commons-beanutils</artifactId>
         </dependency>
-
-        <!--异步数据库连接-->
         <dependency>
-            <groupId>io.vertx</groupId>
-            <artifactId>vertx-jdbc-client</artifactId>
-            <version>${vertx.version}</version>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
         </dependency>
-
         <dependency>
-            <groupId>io.vertx</groupId>
-            <artifactId>vertx-core</artifactId>
-            <version>${vertx.version}</version>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
         </dependency>
-
         <dependency>
             <groupId>com.alibaba.blink</groupId>
             <artifactId>flink-java</artifactId>
@@ -70,38 +60,19 @@ under the License.
             <groupId>com.alibaba.blink</groupId>
             <artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
         </dependency>
-        <!--flink client-->
-        <dependency>
-            <groupId>com.alibaba.blink</groupId>
-            <artifactId>flink-clients_${scala.binary.version}</artifactId>
-        </dependency>
-
-        <!--add scala package-->
-        <dependency>
-            <groupId>com.alibaba.blink</groupId>
-            <artifactId>flink-scala_${scala.binary.version}</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba.blink</groupId>
-            <artifactId>flink-streaming-scala_${scala.binary.version}</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.alibaba.blink</groupId>
-            <artifactId>flink-table_${scala.binary.version}</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>com.alibaba.blink</groupId>
             <artifactId>flink-sql-client</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.alibaba.blink</groupId>
+            <artifactId>flink-cep_2.11</artifactId>
+        </dependency>
     </dependencies>
-
 
     <profiles>
         <profile>
-            <id>connectors-dependencies-for-IDEA</id>
+            <id>dispatcher-dependencies-for-IDEA</id>
 
             <activation>
                 <property>
@@ -137,6 +108,12 @@ under the License.
                     <scope>compile</scope>
                 </dependency>
 
+                <dependency>
+                    <groupId>com.alibaba.blink</groupId>
+                    <artifactId>flink-yarn-shuffle</artifactId>
+                    <version>${flink.version}</version>
+                </dependency>
+
                 <!--add scala package-->
                 <dependency>
                     <groupId>com.alibaba.blink</groupId>
@@ -155,6 +132,13 @@ under the License.
                 <dependency>
                     <groupId>com.alibaba.blink</groupId>
                     <artifactId>flink-sql-client</artifactId>
+                    <version>${flink.version}</version>
+                    <scope>compile</scope>
+                </dependency>
+
+                <dependency>
+                    <groupId>com.alibaba.blink</groupId>
+                    <artifactId>flink-cep_2.11</artifactId>
                     <version>${flink.version}</version>
                     <scope>compile</scope>
                 </dependency>

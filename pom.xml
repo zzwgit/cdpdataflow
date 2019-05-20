@@ -21,18 +21,18 @@ under the License.
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.infinivision.flink</groupId>
-    <artifactId>ruleengine</artifactId>
+    <artifactId>cdpdataflow</artifactId>
     <version>1.0</version>
 
     <modules>
-        <module>connectors</module>
-        <module>dispatcher</module>
-        <module>dispatcher-ui</module>
+        <module>dataflow-connectors</module>
+        <module>dataflow-dispatcher</module>
+        <module>dataflow-dispatcher-ui</module>
     </modules>
 
     <packaging>pom</packaging>
 
-    <name>ruleengine</name>
+    <name>cdpdataflow</name>
     <url>http://www.myorganization.org</url>
 
     <properties>
