@@ -26,7 +26,6 @@ under the License.
 
     <modules>
         <module>dataflow-connectors</module>
-        <module>dataflow-udfs</module>
         <module>dataflow-dispatcher</module>
         <module>dataflow-dispatcher-ui</module>
         <module>dataflow-udfs</module>
@@ -176,6 +175,18 @@ under the License.
                     <source>${java.version}</source>
                     <target>${java.version}</target>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- We use the maven-shade plugin to create a fat jar that contains all necessary dependencies. -->
