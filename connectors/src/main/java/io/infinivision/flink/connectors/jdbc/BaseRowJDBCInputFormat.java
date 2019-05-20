@@ -13,8 +13,10 @@ import org.apache.flink.core.io.InputSplit;
 import org.apache.flink.core.io.InputSplitAssigner;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.dataformat.BinaryString;
+import org.apache.flink.table.dataformat.GenericArray;
 import org.apache.flink.table.dataformat.GenericRow;
 import org.apache.flink.util.Preconditions;
+import org.postgresql.jdbc.PgArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -147,7 +149,17 @@ public class BaseRowJDBCInputFormat extends RichInputFormat<BaseRow, InputSplit>
                 return null;
             }
             for (int pos = 0; pos < reuseRow.getArity(); pos++) {
-                reuseRow.update(pos, resultSet.getObject(pos + 1));
+                Object object = resultSet.getObject(pos + 1);
+
+                if (object instanceof Array) {
+                    Array array = (Array)object;
+                    Object[] objects = (Object[]) array.getArray();
+                    GenericArray genericArray = new GenericArray(objects, objects.length, false);
+                    reuseRow.update(pos, genericArray);
+                } else {
+                    reuseRow.update(pos, object);
+
+                }
             }
             //update hasNext after we've read the record
             hasNext = resultSet.next();
