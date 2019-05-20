@@ -30,6 +30,7 @@ under the License.
         <module>dataflow-dispatcher</module>
         <module>dataflow-dispatcher-ui</module>
         <module>dataflow-udfs</module>
+        <module>dataflow-common</module>
     </modules>
 
     <packaging>pom</packaging>

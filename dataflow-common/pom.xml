@@ -9,28 +9,13 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>dataflow-udfs</artifactId>
+    <artifactId>dataflow-common</artifactId>
 
     <dependencies>
-        <dependency>
-            <groupId>io.infinivision.flink</groupId>
-            <artifactId>dataflow-common</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>io.infinivision.flink</groupId>
-            <artifactId>dataflow-common</artifactId>
-            <version>${project.version}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-
         <dependency>
             <groupId>com.alibaba.blink</groupId>
             <artifactId>flink-java</artifactId>
         </dependency>
-
         <dependency>
             <groupId>com.alibaba.blink</groupId>
             <artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
@@ -62,7 +47,6 @@
             <version>4.11</version>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
 
