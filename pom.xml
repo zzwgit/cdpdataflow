@@ -26,8 +26,10 @@ under the License.
 
     <modules>
         <module>dataflow-connectors</module>
+        <module>dataflow-udfs</module>
         <module>dataflow-dispatcher</module>
         <module>dataflow-dispatcher-ui</module>
+        <module>dataflow-udfs</module>
     </modules>
 
     <packaging>pom</packaging>
