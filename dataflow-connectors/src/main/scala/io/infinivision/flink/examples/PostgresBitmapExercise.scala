@@ -36,6 +36,12 @@ object PostgresBitmapExercise {
       statement.setInt(2, 1)
       statement.executeUpdate()
 
+      val new_user_list = List(7, 8, 9)
+      val new_pg_array = conn.createArrayOf("int", new_user_list.asJava.toArray)
+      statement = conn.prepareStatement("update flink_gp_bitmap SET user_list=rb_or(user_list, rb_build(?)) where uid=?")
+      statement.setArray(1, new_pg_array)
+      statement.setInt(2, 1)
+      statement.executeUpdate()
     } finally {
       if (statement != null) {
         statement.close()
