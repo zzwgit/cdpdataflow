@@ -1,13 +1,14 @@
-package io.infinivision.flink.connectors
+package io.infinivision.flink.connectors.postgres
 
+import java.lang.{Boolean => JBool, Byte => JByte, Double => JDouble, Float => JFloat, Long => JLong, Short => JShort}
+import java.math.{BigDecimal => JBigDecimal}
+import java.sql.{Array => JArray, Date => JDate, Time => JTime, Timestamp => JTimestamp}
+
+import io.infinivision.flink.connectors.jdbc.JDBCBaseOutputFormat
 import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.types.Row
-import java.lang.{Boolean => JBool, Double => JDouble, Long => JLong}
-import java.lang.{Byte => JByte, Float => JFloat, Short => JShort}
-import java.sql.{Array => JArray, Date => JDate, Time => JTime, Timestamp => JTimestamp}
-import java.math.{BigDecimal => JBigDecimal}
 
-class JDBCAppendOutputFormat(
+class PostgresAppendOutputFormat (
   private val userName: String,
   private val password: String,
   private val driverName: String,
@@ -16,20 +17,20 @@ class JDBCAppendOutputFormat(
   private val tableName: String,
   private val fieldNames: Array[String],
   private val fieldTypes: Array[InternalType])
-  extends JDBCBaseOutputFormat(
-    userName,
-    password,
-    driverName,
-    driverVersion,
-    dbURL,
-    tableName,
-    fieldNames,
-    fieldTypes) {
+extends JDBCBaseOutputFormat (
+  userName,
+  password,
+  driverName,
+  driverVersion,
+  dbURL,
+  tableName,
+  fieldNames,
+  fieldTypes) {
 
   override def prepareSql: String = {
     val selectPlaceholder = fieldNames.map{ _ => "?" }.mkString(",")
     s"""
-      |INSERT INTO $tableName VALUES ($selectPlaceholder)
+       |INSERT INTO $tableName VALUES ($selectPlaceholder)
     """.stripMargin
   }
 
@@ -66,8 +67,9 @@ class JDBCAppendOutputFormat(
           statement.setTimestamp(index+1, f)
         case _ =>
           statement.setObject(index+1, field)
-          //LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
+        //LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
       }
     }
   }
+
 }

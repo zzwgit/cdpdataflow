@@ -1,19 +1,19 @@
-package io.infinivision.flink.connectors
+package io.infinivision.flink.connectors.postgres
+
+import java.lang.{Boolean => JBool, Byte => JByte, Double => JDouble, Float => JFloat, Long => JLong, Short => JShort}
+import java.math.{BigDecimal => JBigDecimal}
+import java.sql.{Array => JArray, Date => JDate, Time => JTime, Timestamp => JTimestamp}
+import java.util.{Set => JSet}
 
 import org.apache.flink.table.api.types.InternalType
-import java.util.{Set => JSet}
-import java.lang.{Boolean => JBool, Double => JDouble, Long => JLong}
-import java.lang.{Byte => JByte, Float => JFloat, Short => JShort}
-import java.sql.{Array => JArray, Date => JDate, Time => JTime, Timestamp => JTimestamp}
-import java.math.{BigDecimal => JBigDecimal}
-
-import io.infinivision.flink.connectors.postgres.PostgresValidator
+import io.infinivision.flink.connectors.jdbc.JDBCBaseOutputFormat
 import org.apache.flink.types.Row
 
-import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ArrayBuffer
 
-class JDBCUpsertOutputFormat(
+
+class PostgresUpsertOutputFormat (
   private val userName: String,
   private val password: String,
   private val driverName: String,
@@ -22,17 +22,22 @@ class JDBCUpsertOutputFormat(
   private val tableName: String,
   private val fieldNames: Array[String],
   private val fieldTypes: Array[InternalType],
+  private val bitmapField: Option[String],
   private val uniqueKeys: JSet[String])
-  extends JDBCBaseOutputFormat(
-    userName,
-    password,
-    driverName,
-    driverVersion,
-    dbURL,
-    tableName,
-    fieldNames,
-    fieldTypes
-  ) {
+extends JDBCBaseOutputFormat(
+  userName,
+  password,
+  driverName,
+  driverVersion,
+  dbURL,
+  tableName,
+  fieldNames,
+  fieldTypes) {
+
+  // set the batch count to 1 if bitmapField defined
+  if(bitmapField.isDefined) {
+    batchInterval = 1
+  }
 
   /** Build the update SQL for upsert operation
     *
@@ -70,6 +75,9 @@ class JDBCUpsertOutputFormat(
 
     // select placeholder
     val selectPlaceholder = fieldNames.map{ _ => "?" }.mkString(",")
+
+    // bitmap placeholder
+
 
     // build SQL
     if (driverVersion.equals(PostgresValidator.CONNECTOR_VERSION_VALUE_95)) {
@@ -215,7 +223,7 @@ class JDBCUpsertOutputFormat(
             statement.setObject(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field)
           }
           statement.setObject(fieldSize+index+1, field)
-//          LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
+        //          LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
       }
     }
   }
@@ -299,10 +307,9 @@ class JDBCUpsertOutputFormat(
             statement.setObject(fieldSize + updateFieldIndex.indexOf(index) + 1, field)
           }
           statement.setObject(index+1, field)
-//          LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
+        //          LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
       }
     }
   }
-
 
 }
