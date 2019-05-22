@@ -2,7 +2,6 @@ package io.infinivision.flink.examples
 
 import java.sql.{DriverManager, PreparedStatement}
 
-import org.postgresql.jdbc.PgArray
 import scala.collection.JavaConverters._
 
 object PostgresBitmapExercise {

@@ -1,11 +1,11 @@
 package io.infinivision.flink.connectors.postgres
 
-import java.lang.{Boolean => JBool, Byte => JByte, Double => JDouble, Float => JFloat, Long => JLong, Short => JShort}
+import java.lang.{Boolean => JBool, Integer => JInteger, Byte => JByte, Double => JDouble, Float => JFloat, Long => JLong, Short => JShort}
+import java.sql.{Date => JDate, Time => JTime, Timestamp => JTimestamp}
 import java.math.{BigDecimal => JBigDecimal}
-import java.sql.{Array => JArray, Date => JDate, Time => JTime, Timestamp => JTimestamp}
+import java.sql.Types
 
 import io.infinivision.flink.connectors.jdbc.JDBCBaseOutputFormat
-import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.types.Row
 
 class PostgresAppendOutputFormat (
@@ -16,7 +16,7 @@ class PostgresAppendOutputFormat (
   private val dbURL: String,
   private val tableName: String,
   private val fieldNames: Array[String],
-  private val fieldTypes: Array[InternalType])
+  private val fieldSQLTypes: Array[Int])
 extends JDBCBaseOutputFormat (
   userName,
   password,
@@ -25,7 +25,7 @@ extends JDBCBaseOutputFormat (
   dbURL,
   tableName,
   fieldNames,
-  fieldTypes) {
+  fieldSQLTypes) {
 
   override def prepareSql: String = {
     val selectPlaceholder = fieldNames.map{ _ => "?" }.mkString(",")
@@ -38,36 +38,35 @@ extends JDBCBaseOutputFormat (
   override def updatePreparedStatement(row: Row): Unit = {
     for (index <- 0 until row.getArity) {
       val field = row.getField(index)
-      field match {
-        case f: String =>
-          statement.setString(index + 1, f)
-        case f: JLong =>
-          statement.setLong(index + 1, f)
-        case f: JBigDecimal =>
-          statement.setBigDecimal(index + 1, f)
-        case f: Integer =>
-          statement.setInt(index + 1, f)
-        case f: JDouble =>
-          statement.setDouble(index + 1, f)
-        case f: JBool =>
-          statement.setBoolean(index+1, f)
-        case f: JFloat =>
-          statement.setFloat(index+1, f)
-        case f: JShort =>
-          statement.setShort(index+1, f)
-        case f: JByte =>
-          statement.setByte(index+1, f)
-        case f: JArray =>
-          statement.setArray(index+1, f)
-        case f: JDate =>
-          statement.setDate(index+1, f)
-        case f: JTime =>
-          statement.setTime(index+1, f)
-        case f: JTimestamp =>
-          statement.setTimestamp(index+1, f)
+      fieldSQLTypes(index) match {
+        case Types.VARCHAR =>
+          statement.setString(index + 1, field.asInstanceOf[String])
+        case Types.BIGINT =>
+          statement.setLong(index + 1, field.asInstanceOf[JLong])
+        case Types.DECIMAL =>
+          statement.setBigDecimal(index + 1, field.asInstanceOf[JBigDecimal])
+        case Types.INTEGER =>
+          statement.setInt(index + 1, field.asInstanceOf[JInteger])
+        case Types.DOUBLE =>
+          statement.setDouble(index + 1, field.asInstanceOf[JDouble])
+        case Types.BOOLEAN =>
+          statement.setBoolean(index+1, field.asInstanceOf[JBool])
+        case Types.FLOAT =>
+          statement.setFloat(index+1, field.asInstanceOf[JFloat])
+        case Types.SMALLINT =>
+          statement.setShort(index+1, field.asInstanceOf[JShort])
+        case Types.TINYINT =>
+          statement.setByte(index+1, field.asInstanceOf[JByte])
+        case Types.DATE =>
+          statement.setDate(index+1, field.asInstanceOf[JDate])
+        case Types.TIME =>
+          statement.setTime(index+1, field.asInstanceOf[JTime])
+        case Types.TIMESTAMP =>
+          statement.setTimestamp(index+1, field.asInstanceOf[JTimestamp])
+//        case Types.ARRAY =>
+//          statement.setArray(index+1, field)
         case _ =>
           statement.setObject(index+1, field)
-        //LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
       }
     }
   }

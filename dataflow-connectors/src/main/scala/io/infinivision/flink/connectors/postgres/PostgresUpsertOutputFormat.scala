@@ -1,12 +1,13 @@
 package io.infinivision.flink.connectors.postgres
 
-import java.lang.{Boolean => JBool, Byte => JByte, Double => JDouble, Float => JFloat, Long => JLong, Short => JShort}
-import java.math.{BigDecimal => JBigDecimal}
+import java.lang.{Boolean => JBool, Byte => JByte, Double => JDouble, Float => JFloat, Integer => JInteger, Long => JLong, Short => JShort}
 import java.sql.{Array => JArray, Date => JDate, Time => JTime, Timestamp => JTimestamp}
+import java.math.{BigDecimal => JBigDecimal}
 import java.util.{Set => JSet}
+import java.sql.Types
 
-import org.apache.flink.table.api.types.InternalType
 import io.infinivision.flink.connectors.jdbc.JDBCBaseOutputFormat
+import io.infinivision.flink.connectors.utils.JDBCTypeUtil
 import org.apache.flink.types.Row
 
 import scala.collection.JavaConverters._
@@ -21,7 +22,7 @@ class PostgresUpsertOutputFormat (
   private val dbURL: String,
   private val tableName: String,
   private val fieldNames: Array[String],
-  private val fieldTypes: Array[InternalType],
+  private val fieldSQLTypes: Array[Int],
   private val bitmapField: Option[String],
   private val uniqueKeys: JSet[String])
 extends JDBCBaseOutputFormat(
@@ -32,9 +33,10 @@ extends JDBCBaseOutputFormat(
   dbURL,
   tableName,
   fieldNames,
-  fieldTypes) {
+  fieldSQLTypes) {
 
   // set the batch count to 1 if bitmapField defined
+  // update flink_gp_bitmap SET user_list=rb_or(user_list, rb_build(?)) where uid=?
   if(bitmapField.isDefined) {
     batchInterval = 1
   }
@@ -63,7 +65,12 @@ extends JDBCBaseOutputFormat(
     val setPlaceHolder = fieldNames.foldLeft(ArrayBuffer[String]())(
       (buffer, field) => {
         if (!uniqueKeys.contains(field)) {
-          buffer += field + "=?"
+          // handle the bitMap field
+          if (bitmapField.isDefined && field.equals(bitmapField.get)) {
+            buffer += s"$field=rb_or($field, rb_build(?))"
+          } else {
+            buffer += s"$field=?"
+          }
         }
         buffer
       }
@@ -75,9 +82,6 @@ extends JDBCBaseOutputFormat(
 
     // select placeholder
     val selectPlaceholder = fieldNames.map{ _ => "?" }.mkString(",")
-
-    // bitmap placeholder
-
 
     // build SQL
     if (driverVersion.equals(PostgresValidator.CONNECTOR_VERSION_VALUE_95)) {
@@ -110,120 +114,124 @@ extends JDBCBaseOutputFormat(
 
     for (index <- 0 until row.getArity) {
       val field = row.getField(index)
-      field match {
-        case f: String =>
+      fieldSQLTypes(index) match {
+        case Types.VARCHAR =>
           if (updateFieldIndex.contains(index)) {
-            statement.setString(updateFieldIndex.indexOf(index) + 1, f)
+            statement.setString(updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[String])
           }
           if (conditionFieldIndex.contains(index)) {
-            statement.setString(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, f)
+            statement.setString(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field.asInstanceOf[String])
           }
-          statement.setString(fieldSize+index+1, f)
-        case f: JLong =>
+          statement.setString(fieldSize+index+1, field.asInstanceOf[String])
+        case Types.BIGINT =>
           if (updateFieldIndex.contains(index)) {
-            statement.setLong(updateFieldIndex.indexOf(index) + 1, f)
+            statement.setLong(updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JLong])
           }
           if (conditionFieldIndex.contains(index)) {
-            statement.setLong(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, f)
+            statement.setLong(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field.asInstanceOf[JLong])
           }
-          statement.setLong(fieldSize + index + 1, f)
-        case f: JBigDecimal =>
+          statement.setLong(fieldSize + index + 1, field.asInstanceOf[JLong])
+        case Types.DECIMAL =>
           if (updateFieldIndex.contains(index)) {
-            statement.setBigDecimal(updateFieldIndex.indexOf(index) + 1, f)
+            statement.setBigDecimal(updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JBigDecimal])
           }
           if (conditionFieldIndex.contains(index)) {
-            statement.setBigDecimal(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, f)
+            statement.setBigDecimal(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field.asInstanceOf[JBigDecimal])
           }
-          statement.setBigDecimal(fieldSize+index+1, f)
-        case f: Integer =>
+          statement.setBigDecimal(fieldSize+index+1, field.asInstanceOf[JBigDecimal])
+        case Types.INTEGER =>
           if (updateFieldIndex.contains(index)) {
-            statement.setInt(updateFieldIndex.indexOf(index) + 1, f)
+            statement.setInt(updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JInteger])
           }
           if (conditionFieldIndex.contains(index)) {
-            statement.setInt(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, f)
+            statement.setInt(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field.asInstanceOf[JInteger])
           }
-          statement.setInt(fieldSize+index+1, f)
-        case f: JDouble =>
+          statement.setInt(fieldSize+index+1, field.asInstanceOf[JInteger])
+        case Types.DOUBLE =>
           if (updateFieldIndex.contains(index)) {
-            statement.setDouble(updateFieldIndex.indexOf(index) + 1, f)
+            statement.setDouble(updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JDouble])
           }
           if (conditionFieldIndex.contains(index)) {
-            statement.setDouble(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, f)
+            statement.setDouble(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field.asInstanceOf[JDouble])
           }
-          statement.setDouble(fieldSize+index+1, f)
-        case f: JBool =>
+          statement.setDouble(fieldSize+index+1, field.asInstanceOf[JDouble])
+        case Types.BOOLEAN =>
           if (updateFieldIndex.contains(index)) {
-            statement.setBoolean(updateFieldIndex.indexOf(index) + 1, f)
+            statement.setBoolean(updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JBool])
           }
           if (conditionFieldIndex.contains(index)) {
-            statement.setBoolean(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, f)
+            statement.setBoolean(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field.asInstanceOf[JBool])
           }
-          statement.setBoolean(fieldSize+index+1, f)
-        case f: JFloat =>
+          statement.setBoolean(fieldSize+index+1, field.asInstanceOf[JBool])
+        case Types.FLOAT =>
           if (updateFieldIndex.contains(index)) {
-            statement.setFloat(updateFieldIndex.indexOf(index) + 1, f)
+            statement.setFloat(updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JFloat])
           }
           if (conditionFieldIndex.contains(index)) {
-            statement.setFloat(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, f)
+            statement.setFloat(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field.asInstanceOf[JFloat])
           }
-          statement.setFloat(fieldSize+index+1, f)
-        case f: JShort =>
+          statement.setFloat(fieldSize+index+1, field.asInstanceOf[JFloat])
+        case Types.SMALLINT =>
           if (updateFieldIndex.contains(index)) {
-            statement.setShort(updateFieldIndex.indexOf(index) + 1, f)
+            statement.setShort(updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JShort])
           }
           if (conditionFieldIndex.contains(index)) {
-            statement.setShort(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, f)
+            statement.setShort(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field.asInstanceOf[JShort])
           }
-          statement.setShort(fieldSize+index+1, f)
-        case f: JByte =>
+          statement.setShort(fieldSize+index+1, field.asInstanceOf[JShort])
+        case Types.TINYINT =>
           if (updateFieldIndex.contains(index)) {
-            statement.setByte(updateFieldIndex.indexOf(index) + 1, f)
+            statement.setByte(updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JByte])
           }
           if (conditionFieldIndex.contains(index)) {
-            statement.setByte(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, f)
+            statement.setByte(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field.asInstanceOf[JByte])
           }
-          statement.setByte(fieldSize+index+1, f)
-        case f: JArray =>
+          statement.setByte(fieldSize+index+1, field.asInstanceOf[JByte])
+        case Types.ARRAY =>
+          // TODO: convert to pgArray
           if (updateFieldIndex.contains(index)) {
-            statement.setArray(updateFieldIndex.indexOf(index) + 1, f)
+            statement.setArray(updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JArray])
           }
           if (conditionFieldIndex.contains(index)) {
-            statement.setArray(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, f)
+            statement.setArray(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field.asInstanceOf[JArray])
           }
-          statement.setArray(fieldSize+index+1, f)
-        case f: JDate =>
+          statement.setArray(fieldSize+index+1, field.asInstanceOf[JArray])
+        case Types.DATE =>
           if (updateFieldIndex.contains(index)) {
-            statement.setDate(updateFieldIndex.indexOf(index) + 1, f)
+            statement.setDate(updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JDate])
           }
           if (conditionFieldIndex.contains(index)) {
-            statement.setDate(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, f)
+            statement.setDate(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field.asInstanceOf[JDate])
           }
-          statement.setDate(fieldSize+index+1, f)
-        case f: JTime =>
+          statement.setDate(fieldSize+index+1, field.asInstanceOf[JDate])
+        case Types.TIME =>
           if (updateFieldIndex.contains(index)) {
-            statement.setTime(updateFieldIndex.indexOf(index) + 1, f)
+            statement.setTime(updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JTime])
           }
           if (conditionFieldIndex.contains(index)) {
-            statement.setTime(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, f)
+            statement.setTime(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field.asInstanceOf[JTime])
           }
-          statement.setTime(fieldSize+index+1, f)
-        case f: JTimestamp =>
+          statement.setTime(fieldSize+index+1, field.asInstanceOf[JTime])
+        case Types.TIMESTAMP =>
           if (updateFieldIndex.contains(index)) {
-            statement.setTimestamp(updateFieldIndex.indexOf(index) + 1, f)
+            statement.setTimestamp(updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JTimestamp])
           }
           if (conditionFieldIndex.contains(index)) {
-            statement.setTimestamp(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, f)
+            statement.setTimestamp(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field.asInstanceOf[JTimestamp])
           }
-          statement.setTimestamp(fieldSize+index+1, f)
+          statement.setTimestamp(fieldSize+index+1, field.asInstanceOf[JTimestamp])
+        case Types.BINARY =>
+          val bytes = field.asInstanceOf[Array[Byte]]
+          if (updateFieldIndex.contains(index)) {
+            statement.setBytes(updateFieldIndex.indexOf(index) + 1, bytes)
+          }
+          if (conditionFieldIndex.contains(index)) {
+            statement.setBytes(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, bytes)
+          }
+          statement.setBytes(fieldSize+index+1, bytes)
         case _ =>
-          if (updateFieldIndex.contains(index)) {
-            statement.setObject(updateFieldIndex.indexOf(index) + 1, field)
-          }
-          if (conditionFieldIndex.contains(index)) {
-            statement.setObject(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, field)
-          }
-          statement.setObject(fieldSize+index+1, field)
-        //          LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
+          throw new IllegalArgumentException(s"column type: ${JDBCTypeUtil.getTypeName(fieldSQLTypes(index))} was not support so far...")
+
       }
     }
   }
@@ -236,78 +244,81 @@ extends JDBCBaseOutputFormat(
 
     for (index <- 0 until row.getArity) {
       val field = row.getField(index)
-      field match {
-        case f: String =>
+      fieldSQLTypes(index) match {
+        case Types.VARCHAR =>
           if (updateFieldIndex.contains(index)) {
-            statement.setString(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+            statement.setString(fieldSize + updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[String])
           }
-          statement.setString(index + 1, f)
-        case f: JLong =>
+          statement.setString(index + 1, field.asInstanceOf[String])
+        case Types.BIGINT =>
           if (updateFieldIndex.contains(index)) {
-            statement.setLong(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+            statement.setLong(fieldSize + updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JLong])
           }
-          statement.setLong(index + 1, f)
-        case f: JBigDecimal =>
+          statement.setLong(index + 1, field.asInstanceOf[JLong])
+        case Types.DECIMAL =>
           if (updateFieldIndex.contains(index)) {
-            statement.setBigDecimal(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+            statement.setBigDecimal(fieldSize + updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JBigDecimal])
           }
-          statement.setBigDecimal(index + 1, f)
-        case f: Integer =>
+          statement.setBigDecimal(index + 1, field.asInstanceOf[JBigDecimal])
+        case Types.INTEGER =>
           if (updateFieldIndex.contains(index)) {
-            statement.setInt(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+            statement.setInt(fieldSize + updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JInteger])
           }
-          statement.setInt(index + 1, f)
-        case f: JDouble =>
+          statement.setInt(index + 1, field.asInstanceOf[JInteger])
+        case Types.DOUBLE =>
           if (updateFieldIndex.contains(index)) {
-            statement.setDouble(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+            statement.setDouble(fieldSize + updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JDouble])
           }
-          statement.setDouble(index + 1, f)
-        case f: JBool =>
+          statement.setDouble(index + 1, field.asInstanceOf[JDouble])
+        case Types.BOOLEAN =>
           if (updateFieldIndex.contains(index)) {
-            statement.setBoolean(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+            statement.setBoolean(fieldSize + updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JBool])
           }
-          statement.setBoolean(index+1, f)
-        case f: JFloat =>
+          statement.setBoolean(index+1, field.asInstanceOf[JBool])
+        case Types.FLOAT =>
           if (updateFieldIndex.contains(index)) {
-            statement.setFloat(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+            statement.setFloat(fieldSize + updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JFloat])
           }
-          statement.setFloat(index+1, f)
-        case f: JShort =>
+          statement.setFloat(index+1, field.asInstanceOf[JFloat])
+        case Types.SMALLINT =>
           if (updateFieldIndex.contains(index)) {
-            statement.setShort(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+            statement.setShort(fieldSize + updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JShort])
           }
-          statement.setShort(index+1, f)
-        case f: JByte =>
+          statement.setShort(index+1, field.asInstanceOf[JShort])
+        case Types.TINYINT =>
           if (updateFieldIndex.contains(index)) {
-            statement.setByte(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+            statement.setByte(fieldSize + updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JByte])
           }
-          statement.setByte(index+1, f)
-        case f: JArray =>
+          statement.setByte(index+1, field.asInstanceOf[JByte])
+        case Types.ARRAY =>
           if (updateFieldIndex.contains(index)) {
-            statement.setArray(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+            statement.setArray(fieldSize + updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JArray])
           }
-          statement.setArray(index+1, f)
-        case f: JDate =>
+          statement.setArray(index+1, field.asInstanceOf[JArray])
+        case Types.DATE =>
           if (updateFieldIndex.contains(index)) {
-            statement.setDate(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+            statement.setDate(fieldSize + updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JDate])
           }
-          statement.setDate(index+1, f)
-        case f: JTime =>
+          statement.setDate(index+1, field.asInstanceOf[JDate])
+        case Types.TIME =>
           if (updateFieldIndex.contains(index)) {
-            statement.setTime(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+            statement.setTime(fieldSize + updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JTime])
           }
-          statement.setTime(index+1, f)
-        case f: JTimestamp =>
+          statement.setTime(index+1, field.asInstanceOf[JTime])
+        case Types.TIMESTAMP =>
           if (updateFieldIndex.contains(index)) {
-            statement.setTimestamp(fieldSize + updateFieldIndex.indexOf(index) + 1, f)
+            statement.setTimestamp(fieldSize + updateFieldIndex.indexOf(index) + 1, field.asInstanceOf[JTimestamp])
           }
-          statement.setTimestamp(index+1, f)
+          statement.setTimestamp(index+1, field.asInstanceOf[JTimestamp])
+        case Types.BINARY =>
+          val bytes = field.asInstanceOf[Array[Byte]]
+
+          if (updateFieldIndex.contains(index)) {
+            statement.setBytes(fieldSize + updateFieldIndex.indexOf(index) + 1, bytes)
+          }
+          statement.setBytes(index+1, bytes)
         case _ =>
-          if (updateFieldIndex.contains(index)) {
-            statement.setObject(fieldSize + updateFieldIndex.indexOf(index) + 1, field)
-          }
-          statement.setObject(index+1, field)
-        //          LOG.error(s"illegal row field type: ${field.getClass.getSimpleName}")
+          throw new IllegalArgumentException(s"column type: ${JDBCTypeUtil.getTypeName(fieldSQLTypes(index))} was not support so far...")
       }
     }
   }

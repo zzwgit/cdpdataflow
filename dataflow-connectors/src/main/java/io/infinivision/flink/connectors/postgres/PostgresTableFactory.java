@@ -1,7 +1,5 @@
 package io.infinivision.flink.connectors.postgres;
 
-import io.infinivision.flink.connectors.jdbc.JDBCTableSink;
-import io.infinivision.flink.connectors.jdbc.JDBCTableSinkBuilder;
 import io.infinivision.flink.connectors.utils.JDBCTableOptions;
 import org.apache.flink.api.java.io.jdbc.JDBCOptions;
 import org.apache.flink.table.api.RichTableSchema;
@@ -136,7 +134,7 @@ public class PostgresTableFactory implements
             }
 
             // check the column type. the bitmap field type must be VARBINARY
-            if (columnTypes[index] != DataTypes.BYTE_ARRAY) {
+            if (!columnTypes[index].equals(DataTypes.BYTE_ARRAY)) {
                 throw new IllegalArgumentException("bitmapField type must be VARBINARY");
             }
 
@@ -180,6 +178,8 @@ public class PostgresTableFactory implements
         }
 
         builder.schema(Option.apply(schema));
+
+        builder.setParameterTypes(schema.getColumnTypes());
 
         return builder.build()
                 .configure(schema.getColumnNames(), schema.getColumnTypes());

@@ -46,7 +46,7 @@ object PostgresTableSink  {
           dbURL,
           tableName,
           schema.get.getColumnNames,
-          schema.get.getColumnTypes
+          parameterTypes
         )
       } else {
 
@@ -75,7 +75,7 @@ object PostgresTableSink  {
           dbURL,
           tableName,
           schema.get.getColumnNames,
-          schema.get.getColumnTypes,
+          parameterTypes,
           bitmapField,
           uniqueIndex
         )

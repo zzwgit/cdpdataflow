@@ -18,7 +18,7 @@ abstract class JDBCBaseOutputFormat(
   private val dbURL: String,
   private val tableName: String,
   private val fieldNames: Array[String],
-  private val fieldTypes: Array[InternalType])
+  private val fieldSQLTypes: Array[Int])
   extends RichOutputFormat[JTuple2[JBool, Row]]
     with Logging {
 
