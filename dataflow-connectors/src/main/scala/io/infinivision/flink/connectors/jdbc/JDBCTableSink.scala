@@ -11,16 +11,12 @@ import org.apache.flink.table.sinks.{BatchCompatibleStreamTableSink, TableSinkBa
 import org.apache.flink.table.util.{Logging, TableConnectorUtil}
 import org.apache.flink.types.Row
 
-class JDBCTableSink(
+abstract class JDBCTableSink(
   outputFormat: JDBCBaseOutputFormat)
   extends TableSinkBase[JTuple2[JBool, Row]]
     with UpsertStreamTableSink[Row]
     with BatchCompatibleStreamTableSink[JTuple2[JBool, Row]]
     with Logging {
-
-  override protected def copy: TableSinkBase[JTuple2[JBool, Row]] = {
-    new JDBCTableSink(outputFormat)
-  }
 
   override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]]): DataStreamSink[_] = {
     dataStream.addSink(new JDBCTableSinkFunction(outputFormat))
@@ -32,9 +28,7 @@ class JDBCTableSink(
       .name(TableConnectorUtil.generateRuntimeName(getClass, getFieldNames))
   }
 
-  override def setIsAppendOnly(isAppendOnly: JBool): Unit = {}
 
-  override def setKeyFields(keys: Array[String]): Unit = {}
 
   override def getRecordType: DataType = DataTypes.createRowType(getFieldTypes, getFieldNames)
 
