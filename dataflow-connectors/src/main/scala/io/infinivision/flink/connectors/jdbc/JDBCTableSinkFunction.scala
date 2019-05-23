@@ -1,12 +1,12 @@
-package io.infinivision.flink.connectors
+package io.infinivision.flink.connectors.jdbc
 
-import org.apache.flink.streaming.api.functions.sink.{RichSinkFunction, SinkFunction}
 import java.lang.{Boolean => JBool}
 import java.util
 
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.checkpoint.ListCheckpointed
+import org.apache.flink.streaming.api.functions.sink.{RichSinkFunction, SinkFunction}
 import org.apache.flink.table.util.Logging
 import org.apache.flink.types.Row
 

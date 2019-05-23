@@ -1,11 +1,10 @@
-package io.infinivision.flink.connectors
+package io.infinivision.flink.connectors.jdbc
 
 import java.lang.{Boolean => JBool}
 import java.sql.{Connection, DriverManager, PreparedStatement, SQLException}
-import java.util.{Set => JSet}
 
-import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.api.common.io.RichOutputFormat
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.api.types.InternalType
 import org.apache.flink.table.util.Logging
@@ -19,14 +18,14 @@ abstract class JDBCBaseOutputFormat(
   private val dbURL: String,
   private val tableName: String,
   private val fieldNames: Array[String],
-  private val fieldTypes: Array[InternalType])
+  private val fieldSQLTypes: Array[Int])
   extends RichOutputFormat[JTuple2[JBool, Row]]
     with Logging {
 
   private var dbConn: Connection = _
   protected var statement: PreparedStatement = _
   private var batchCount: Int = 0
-  private var batchInterval: Int = 5000
+  protected var batchInterval: Int = 5000
 
   override def configure(parameters: Configuration): Unit = {
 
@@ -86,7 +85,7 @@ abstract class JDBCBaseOutputFormat(
       }
     } catch {
       case ex: SQLException =>
-        LOG.error(s"JDBCUpsertOutputFormat could not be closed: ${ex.getMessage}")
+        LOG.error(s"JDBCOutputFormat could not be closed: ${ex.getMessage}")
         throw new RuntimeException(ex)
     } finally {
       statement = null

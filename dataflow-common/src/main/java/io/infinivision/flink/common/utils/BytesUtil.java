@@ -1,5 +1,6 @@
 package io.infinivision.flink.common.utils;
 
+import com.google.common.collect.Lists;
 import org.apache.flink.core.memory.MemorySegment;
 import org.apache.flink.core.memory.MemorySegmentFactory;
 import org.apache.flink.table.dataformat.BaseRow;
@@ -8,7 +9,10 @@ import org.apache.flink.table.dataformat.util.BinaryRowUtil;
 import org.apache.flink.table.typeutils.BaseRowSerializer;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * A helper class for Table Service.
@@ -27,6 +31,39 @@ public final class BytesUtil {
         ans |= (bytes[offset + 1] & 0xff) << 16;
         ans |= (bytes[offset + 2] & 0xff) << 8;
         ans |= (bytes[offset + 3] & 0xff);
+        return ans;
+    }
+
+    public static Integer[] bytesToInts(byte[] bytes) {
+        Integer[] ints = new Integer[bytes.length/4];
+        for (int offset=0; offset<bytes.length; offset+=4) {
+            ints[offset/4] = bytesToInt(bytes, offset);
+        }
+        return ints;
+    }
+
+    public static Long[] bytesToLongs(byte[] bytes) {
+        Long[] longs = new Long[bytes.length/8];
+        for (int offset=0; offset<bytes.length; offset+=8) {
+            longs[offset/8] = bytesToLong(bytes, offset);
+        }
+        return longs;
+    }
+
+    public static Long bytesToLong(byte[] bytes) {
+        return bytesToLong(bytes, 0);
+    }
+
+    public static Long bytesToLong(byte[] bytes, int offset) {
+        long ans = 0;
+        ans |= (long) (bytes[offset] & 0xff) << 56;
+        ans |= (long)(bytes[offset + 1] & 0xff) << 48;
+        ans |= (long)(bytes[offset + 2] & 0xff) << 40;
+        ans |= (long)(bytes[offset + 3] & 0xff) << 32;
+        ans |= (long)(bytes[offset + 4] & 0xff) << 24;
+        ans |= (long)(bytes[offset + 5] & 0xff) << 16;
+        ans |= (long)(bytes[offset + 6] & 0xff) << 8;
+        ans |= (long)(bytes[offset + 7] & 0xff);
         return ans;
     }
 
@@ -119,4 +156,5 @@ public final class BytesUtil {
     public static BaseRow deSerialize(byte[] buffer, int sizeInBytes, BaseRowSerializer baseRowSerializer) {
         return deSerialize(buffer, 0, sizeInBytes, baseRowSerializer);
     }
+
 }

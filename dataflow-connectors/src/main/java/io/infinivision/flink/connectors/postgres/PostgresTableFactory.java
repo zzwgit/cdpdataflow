@@ -1,9 +1,9 @@
 package io.infinivision.flink.connectors.postgres;
 
-import io.infinivision.flink.connectors.JDBCTableSink;
 import io.infinivision.flink.connectors.utils.JDBCTableOptions;
 import org.apache.flink.api.java.io.jdbc.JDBCOptions;
 import org.apache.flink.table.api.RichTableSchema;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.factories.BatchTableSinkFactory;
@@ -117,14 +117,42 @@ public class PostgresTableFactory implements
                 "columnNames length must be equal to nullable length");
 
 
-        JDBCTableSink.Builder builder = JDBCTableSink.builder()
-                .userName(prop.getString(JDBCOptions.USER_NAME))
+        // validate bitmap field
+        String bitmapField = prop.getString(PostgresTableOptions.BITMAP_FIELD);
+        boolean hasBitmapField = false;
+        if (bitmapField != null) {
+            int length = columnNames.length;
+            int index = 0;
+            for (; index < length; index++) {
+                if (bitmapField.equals(columnNames[index])) {
+                    break;
+                }
+            }
+
+            if (index == length) {
+                throw new IllegalArgumentException(String.format("bitmapField: %s was not in the column list", bitmapField));
+            }
+
+            // check the column type. the bitmap field type must be VARBINARY
+            if (!columnTypes[index].equals(DataTypes.BYTE_ARRAY)) {
+                throw new IllegalArgumentException("bitmapField type must be VARBINARY");
+            }
+
+            hasBitmapField = true;
+        }
+
+        PostgresTableSink.Builder builder = PostgresTableSink.builder();
+        builder.userName(prop.getString(JDBCOptions.USER_NAME))
                 .password(prop.getString(JDBCOptions.PASSWORD))
                 .dbURL(prop.getString(JDBCOptions.DB_URL))
                 .driverName(DRIVERNAME)
                 .driverVersion(prop.getString(JDBCTableOptions.VERSION))
                 .tableName(prop.getString(JDBCOptions.TABLE_NAME))
                 .updateMode(prop.getString(JDBCTableOptions.UPDATE_MODE));
+
+        if (hasBitmapField) {
+            builder.bitmapField(Option.apply(bitmapField));
+        }
 
         Set<String> primaryKeys = new HashSet<>();
         Set<Set<String>> uniqueKeys = new HashSet<>();
@@ -149,24 +177,9 @@ public class PostgresTableFactory implements
             builder.uniqueKeys(Option.apply(uniqueKeys));
         }
 
-//        if (primaryKeys.isEmpty() && uniqueKeys.isEmpty()) {
-//            throw new IllegalArgumentException("JDBCUpsertTableSink should at least contain one primary key or one unique index");
-//        } else if (!primaryKeys.isEmpty()) {
-//            if (primaryKeys.size() == columnNames.length) {
-//                throw new IllegalArgumentException("JDBCUpsertTableSink primary key fields size should less than total column size");
-//            }
-//            builder.uniqueKeys(Option.apply(primaryKeys));
-//        } else {
-//            if (uniqueKeys.size() != 1) {
-//                throw new IllegalArgumentException("JDBCUpsertTableSink should contain only one unique index");
-//            } else if (uniqueKeys.size() == columnNames.length) {
-//                throw new IllegalArgumentException("JDBCUpsertTableSink unique key size should less than total column size");
-//            }
-//
-//            builder.uniqueKeys(Option.apply(uniqueKeys.iterator().next()));
-//        }
-
         builder.schema(Option.apply(schema));
+
+        builder.setParameterTypes(schema.getColumnTypes());
 
         return builder.build()
                 .configure(schema.getColumnNames(), schema.getColumnTypes());
@@ -175,7 +188,7 @@ public class PostgresTableFactory implements
     @SuppressWarnings("unchecked")
     @Override
     public StreamTableSink<BaseRow> createStreamTableSink(Map<String, String> properties) {
-        return (StreamTableSink<BaseRow>)createJDBCStreamTableSink(properties);
+        return (StreamTableSink<BaseRow>) createJDBCStreamTableSink(properties);
     }
 
     @Override
@@ -199,7 +212,7 @@ public class PostgresTableFactory implements
     @Override
     public List<String> supportedProperties() {
         List<String> properties = new ArrayList<>(JDBCOptions.SUPPORTED_KEYS);
-        properties.addAll(JDBCTableOptions.SUPPORTED_KEYS);
+        properties.addAll(PostgresTableOptions.SUPPORTED_KEYS);
         return properties;
     }
 

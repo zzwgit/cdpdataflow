@@ -37,6 +37,18 @@ under the License.
     <dependencies>
 
         <dependency>
+            <groupId>io.infinivision.flink</groupId>
+            <artifactId>dataflow-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.infinivision.flink</groupId>
+            <artifactId>dataflow-udfs</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.alibaba.blink</groupId>
             <artifactId>flink-jdbc</artifactId>
             <version>${flink.version}</version>
