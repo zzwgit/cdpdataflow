@@ -5,19 +5,14 @@ import com.google.common.collect.Maps;
 import io.infinivision.flink.client.LocalExecutorExtend;
 import io.infinivision.flink.entity.CheckPointEntity;
 import io.infinivision.flink.entity.ContextInfoEntity;
-import io.infinivision.flink.handler.EnvHandler;
-import io.infinivision.flink.handler.InfoHandler;
-import io.infinivision.flink.handler.ModifyHandler;
-import io.infinivision.flink.handler.SqlHandler;
+import io.infinivision.flink.handler.*;
 import io.infinivision.flink.parser.OptionsParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.table.client.cli.CliOptionsParser;
 import org.apache.flink.table.client.config.Environment;
-import org.apache.flink.table.client.gateway.Executor;
 import org.apache.flink.table.client.gateway.SessionContext;
-import org.apache.flink.table.client.gateway.local.LocalExecutor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -32,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-public class Dispatcher {
+public class DispatcherConsoleServer {
 
     // actions
     private static final String ACTION_RUN = "run";
@@ -47,9 +42,13 @@ public class Dispatcher {
 
     private InfoHandler infoHandler = InfoHandler.getInstance();
 
-    public static void main(String[] args) throws IOException, NoSuchMethodException, InvocationTargetException, IllegalAccessException, ParseException {
+    //命令行方式时的入口
+    public static void main(String[] args) throws Exception {
+        DispatcherConsoleServer dispatcher = new DispatcherConsoleServer();
+        dispatcher.dispatching(args);
+    }
 
-        Dispatcher util = new Dispatcher();
+    public String dispatching(String[] args)  throws Exception {
 
         // get action
         String action = args[0];
@@ -58,27 +57,28 @@ public class Dispatcher {
         // remove action from parameters
         final String[] params = Arrays.copyOfRange(args, 1, args.length);
 
-        ContextInfoEntity contextInfo = util.getContextInfoEntity(params);
+        ContextInfoEntity contextInfo = this.getContextInfoEntity(params);
 
         switch (action) {
             case ACTION_RUN:
-                util.envHandler.setAttributes(contextInfo);
-                util.sqlHandler.handleSql(contextInfo);
-                break;
+                this.envHandler.setAttributes(contextInfo);
+                return this.sqlHandler.handleSql(contextInfo);
 
             case ACTION_MODIFY:
-                util.modifyHandler.modify(contextInfo, params);
-                break;
+                this.modifyHandler.modify(contextInfo, params);
+                return null;
 
             case ACTION_INFO:
-                util.infoHandler.info(contextInfo, params);
+                this.infoHandler.info(contextInfo, params);
                 break;
             default:
                 System.out.println("-----------------do nothing--------------------------");
-                break;
+                return null;
         }
+        return null;
 
     }
+
 
     private ContextInfoEntity getContextInfoEntity(String[] args) throws IOException, InvocationTargetException, IllegalAccessException, ParseException {
         CommandLine commandLine = OptionsParser.argsToCommandLine(args);

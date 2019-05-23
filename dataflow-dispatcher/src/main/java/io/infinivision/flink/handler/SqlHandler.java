@@ -18,24 +18,25 @@ public class SqlHandler {
         return INSTANCE;
     }
 
-    public void handleSql(ContextInfoEntity contextInfo) throws NoSuchMethodException {
+    public String handleSql(ContextInfoEntity contextInfo) throws Exception {
 
         Client cli = new Client(contextInfo.getSessionContext(), contextInfo.getExecutor());
-//        Method method = cli.getClass().getDeclaredMethod("callCommand", SqlCommandParserExtend.SqlCommandCall.class);
-//        method.setAccessible(true);
 
         String sql = contextInfo.getSql();
+        if (StringUtils.isBlank(sql)) {
+            throw new Exception("sql context is empty!");
+        }
 
-        for (String s : StringUtils.split(sql, ";")) {
-
+        StringBuffer sb = new StringBuffer();
+        for (String s : sql.split("(;\r\n|;\r|;\n)")) {
             Optional<SqlCommandParserExtend.SqlCommandCall> cmdCall = SqlCommandParserExtend.parse(s);
-//                method.invoke(cli, cmdCall.get());
             if (!cmdCall.isPresent()) {
                 System.err.println("error in execute:" + s);
                 System.err.println("parse is :" + cmdCall.toString());
             }
-            cli.callCommand(cmdCall.get());
+            String result = cli.callCommand(cmdCall.get());
+            sb.append(result);
         }
-
+        return sb.toString();
     }
 }
