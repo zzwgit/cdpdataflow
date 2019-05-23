@@ -1,5 +1,6 @@
 package org.apache.flink.table.client.cli;
 
+import com.alibaba.fastjson.JSON;
 import io.infinivision.flink.client.LocalExecutorExtend;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.table.api.TableSchema;
@@ -46,7 +47,8 @@ public class Client {
 		return parsedLine;
 	}
 
-	public void callCommand(SqlCommandCall cmdCall) {
+	public String callCommand(SqlCommandCall cmdCall) {
+		StringBuffer sb = new StringBuffer();
 		switch (cmdCall.command) {
 		case RESET:
 			callReset();
@@ -92,11 +94,14 @@ public class Client {
 			callCreateFunction(cmdCall);
 			break;
 		case COMMIT:
-			callCommitJob(cmdCall);
+			String result = callCommitJob(cmdCall);
+			sb.append(result);
 			break;
 		default:
 			throw new SqlClientException("Unsupported command: " + cmdCall.command);
 		}
+
+		return sb.toString();
 	}
 
 	private void callReset() {
@@ -260,13 +265,15 @@ public class Client {
 		}
 	}
 
-	private void callCommitJob(SqlCommandCall cmdCall) {
+	private String callCommitJob(SqlCommandCall cmdCall) {
 		try {
 			ProgramTargetDescriptor result = executor.commitJob(context, cmdCall.operands[0]);
 			printInfo("---------------------------------------------------------------------------------------");
 			printInfo("commit with:"+result.toString());
+			return JSON.toJSONString(result);
 		} catch (SqlExecutionException e) {
 			printExecutionException(e);
+			return JSON.toJSONString(e);
 		}
 	}
 
