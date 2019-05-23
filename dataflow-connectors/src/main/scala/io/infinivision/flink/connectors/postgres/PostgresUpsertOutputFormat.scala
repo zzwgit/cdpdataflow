@@ -6,6 +6,7 @@ import java.math.{BigDecimal => JBigDecimal}
 import java.util.{Set => JSet}
 import java.sql.Types
 
+import io.infinivision.flink.common.utils.BytesUtil
 import io.infinivision.flink.connectors.jdbc.JDBCBaseOutputFormat
 import io.infinivision.flink.connectors.utils.JDBCTypeUtil
 import org.apache.flink.types.Row
@@ -61,13 +62,14 @@ extends JDBCBaseOutputFormat(
     * @return upsert sql statement
     */
   override def prepareSql: String = {
+    val tbAlias = "tbAlias"
     // build set placeholder
     val setPlaceHolder = fieldNames.foldLeft(ArrayBuffer[String]())(
       (buffer, field) => {
         if (!uniqueKeys.contains(field)) {
           // handle the bitMap field
           if (bitmapField.isDefined && field.equals(bitmapField.get)) {
-            buffer += s"$field=rb_or($field, rb_build(?))"
+            buffer += s"$field=rb_or($tbAlias.$field, rb_build(?))"
           } else {
             buffer += s"$field=?"
           }
@@ -81,17 +83,36 @@ extends JDBCBaseOutputFormat(
     val conditionPlaceHolder = uniqueKeys.asScala.map( _ + "=?").mkString(" and ")
 
     // select placeholder
-    val selectPlaceholder = fieldNames.map{ _ => "?" }.mkString(",")
+    val selectPlaceholder = fieldNames.foldLeft(ArrayBuffer[String]())(
+      (buffer, field) => {
+          // handle the bitMap field
+          if (bitmapField.isDefined && field.equals(bitmapField.get)) {
+            buffer += s"rb_build(?)"
+          } else {
+            buffer += s"?"
+          }
+        buffer
+      }
+    ).mkString(",")
+
 
     // build SQL
+    /*
+
+     INSERT INTO flink_gp_bitmap as tb(uid, user_list) VALUES (55796872,rb_build(ARRAY[1781]))
+     ON CONFLICT (uid) DO UPDATE SET user_list=rb_or(tb.user_list, rb_build(ARRAY[1782]))
+
+    WITH upserts as (UPDATE flink_gp_bitmap AS tb set user_list=rb_or(tb.user_list, rb_build(ARRAY[1784, 1785])) where uid=55796873 returning *)
+    INSERT INTO flink_gp_bitmap SELECT 55796873, rb_build(ARRAY[1781]) WHERE NOT EXISTS (SELECT 1 FROM upserts)
+     */
     if (driverVersion.equals(PostgresValidator.CONNECTOR_VERSION_VALUE_95)) {
       s"""
-         | INSERT INTO $tableName VALUES ($selectPlaceholder)
+         | INSERT INTO $tableName AS $tbAlias(${fieldNames.mkString(",")}) VALUES ($selectPlaceholder)
          | ON CONFLICT (${uniqueKeys.asScala.mkString(",")}) DO UPDATE SET $setPlaceHolder
        """.stripMargin
     } else {
       s"""
-         | WITH upserts as (UPDATE $tableName SET $setPlaceHolder WHERE $conditionPlaceHolder RETURNING *)
+         | WITH upserts as (UPDATE $tableName AS $tbAlias SET $setPlaceHolder WHERE $conditionPlaceHolder RETURNING *)
          | INSERT INTO $tableName SELECT $selectPlaceholder WHERE NOT EXISTS (SELECT 1 FROM upserts)
        """.stripMargin
     }
@@ -221,14 +242,15 @@ extends JDBCBaseOutputFormat(
           }
           statement.setTimestamp(fieldSize+index+1, field.asInstanceOf[JTimestamp])
         case Types.BINARY =>
+          // convert to roaringBitMap
           val bytes = field.asInstanceOf[Array[Byte]]
+          val ints = BytesUtil.bytesToInts(bytes).toSet.asJava.toArray()
+          val array = dbConn.createArrayOf("int", ints)
           if (updateFieldIndex.contains(index)) {
-            statement.setBytes(updateFieldIndex.indexOf(index) + 1, bytes)
+            statement.setArray(updateFieldIndex.indexOf(index) + 1, array)
           }
-          if (conditionFieldIndex.contains(index)) {
-            statement.setBytes(updateFieldIndex.length + conditionFieldIndex.indexOf(index) +1, bytes)
-          }
-          statement.setBytes(fieldSize+index+1, bytes)
+
+          statement.setArray(fieldSize+index+1, array)
         case _ =>
           throw new IllegalArgumentException(s"column type: ${JDBCTypeUtil.getTypeName(fieldSQLTypes(index))} was not support so far...")
 
@@ -311,12 +333,14 @@ extends JDBCBaseOutputFormat(
           }
           statement.setTimestamp(index+1, field.asInstanceOf[JTimestamp])
         case Types.BINARY =>
+          // convert to RoaringBitMap
           val bytes = field.asInstanceOf[Array[Byte]]
-
+          val ints = BytesUtil.bytesToInts(bytes).toSet.asJava.toArray()
+          val array = dbConn.createArrayOf("int", ints)
           if (updateFieldIndex.contains(index)) {
-            statement.setBytes(fieldSize + updateFieldIndex.indexOf(index) + 1, bytes)
+            statement.setArray(fieldSize + updateFieldIndex.indexOf(index) + 1, array)
           }
-          statement.setBytes(index+1, bytes)
+          statement.setArray(index+1, array)
         case _ =>
           throw new IllegalArgumentException(s"column type: ${JDBCTypeUtil.getTypeName(fieldSQLTypes(index))} was not support so far...")
       }

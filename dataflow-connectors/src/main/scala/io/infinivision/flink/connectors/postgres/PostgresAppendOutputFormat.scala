@@ -1,6 +1,7 @@
 package io.infinivision.flink.connectors.postgres
 
-import java.lang.{Boolean => JBool, Integer => JInteger, Byte => JByte, Double => JDouble, Float => JFloat, Long => JLong, Short => JShort}
+import java.lang.{Boolean => JBool, Integer => JInteger, Byte => JByte,
+  Double => JDouble, Float => JFloat, Long => JLong, Short => JShort}
 import java.sql.{Date => JDate, Time => JTime, Timestamp => JTimestamp}
 import java.math.{BigDecimal => JBigDecimal}
 import java.sql.Types

@@ -22,7 +22,7 @@ abstract class JDBCBaseOutputFormat(
   extends RichOutputFormat[JTuple2[JBool, Row]]
     with Logging {
 
-  private var dbConn: Connection = _
+  protected var dbConn: Connection = _
   protected var statement: PreparedStatement = _
   private var batchCount: Int = 0
   protected var batchInterval: Int = 5000

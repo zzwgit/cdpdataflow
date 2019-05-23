@@ -3,7 +3,7 @@ package io.infinivision.flink.connectors.postgres
 import java.lang
 import java.lang.{Boolean => JBool}
 import io.infinivision.flink.connectors.jdbc.{JDBCBaseOutputFormat, JDBCTableSink, JDBCTableSinkBuilder}
-import org.apache.flink.api.java.tuple
+import org.apache.flink.api.java.tuple.Tuple2
 import org.apache.flink.table.sinks.TableSinkBase
 import org.apache.flink.types.Row
 
@@ -11,7 +11,7 @@ class PostgresTableSink (
   outputFormat: JDBCBaseOutputFormat)
 extends JDBCTableSink(outputFormat) {
 
-  override protected def copy: TableSinkBase[tuple.Tuple2[lang.Boolean, Row]] = {
+  override protected def copy: TableSinkBase[Tuple2[lang.Boolean, Row]] = {
     new PostgresTableSink(outputFormat)
   }
 

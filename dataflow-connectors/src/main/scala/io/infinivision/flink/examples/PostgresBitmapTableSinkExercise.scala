@@ -1,14 +1,14 @@
 package io.infinivision.flink.examples
 
 import io.infinivision.flink.connectors.postgres.PostgresTableFactory
-import io.infinivision.flink.udfs.LongCollectListFunction
+import io.infinivision.flink.udfs.{IntCollectListFunction, LongCollectListFunction}
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.{RichTableSchema, TableEnvironment}
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
 import org.apache.flink.table.sources.csv.CsvTableSource
 import org.apache.flink.table.util.TableProperties
-
 import org.apache.flink.api.scala._
+
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
@@ -22,7 +22,7 @@ object PostgresBitmapTableSinkExercise {
     val csvPath = "/Users/hongtaozhang/Downloads/train10.csv"
     val probeSource = CsvTableSource.builder()
       .path(csvPath)
-      .field("aid", DataTypes.LONG)
+      .field("aid", DataTypes.INT)
       .field("uid", DataTypes.INT)
       .field("label", DataTypes.STRING)
       .enableEmptyColumnAsNull()
@@ -33,7 +33,7 @@ object PostgresBitmapTableSinkExercise {
     // create postgres upsert table sink
     val postgresSinkProperties = mutable.Map[String, String]()
     postgresSinkProperties += (("updatemode", "upsert"))
-    postgresSinkProperties += (("version", "9.5"))
+    postgresSinkProperties += (("version", "9.4"))
     postgresSinkProperties +=(("username", "gpadmin"))
     postgresSinkProperties += (("password", "Welcome123@"))
     postgresSinkProperties += (("tablename", "flink_gp_bitmap"))
@@ -59,13 +59,13 @@ object PostgresBitmapTableSinkExercise {
     val postgresTableFactory = new PostgresTableFactory
     val postgresTableSink = postgresTableFactory.createStreamTableSink(postgresSinkTableProperties.toMap)
     tEnv.registerTableSink("output", postgresTableSink)
-    tEnv.registerFunction("long_collect_list", new LongCollectListFunction)
+    tEnv.registerFunction("int_collect_list", new IntCollectListFunction)
 
     // sql update
     val sql =
       """
         |INSERT INTO output
-        |SELECT uid, long_collect_list(aid)
+        |SELECT uid, int_collect_list(aid)
         |FROM train
         |GROUP BY uid
       """.stripMargin
