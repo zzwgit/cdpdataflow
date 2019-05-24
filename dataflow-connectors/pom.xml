@@ -54,6 +54,12 @@ under the License.
             <version>${flink.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.alibaba.blink</groupId>
+            <artifactId>flink-hbase_${scala.binary.version}</artifactId>
+            <version>${flink.version}</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
         <dependency>
             <groupId>org.postgresql</groupId>
