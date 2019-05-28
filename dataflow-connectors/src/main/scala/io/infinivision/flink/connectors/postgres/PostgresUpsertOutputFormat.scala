@@ -38,9 +38,9 @@ extends JDBCBaseOutputFormat(
 
   // set the batch count to 1 if bitmapField defined
   // update flink_gp_bitmap SET user_list=rb_or(user_list, rb_build(?)) where uid=?
-  if(bitmapField.isDefined) {
-    batchInterval = 1
-  }
+  //if(bitmapField.isDefined) {
+  //  batchInterval = 1
+  //}
 
   /** Build the update SQL for upsert operation
     *
