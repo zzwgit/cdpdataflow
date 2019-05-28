@@ -118,6 +118,11 @@ class LongCollectListFunction extends CollectListFunction[JLong](DataTypes.LONG)
         result += iterator.next()
       }
     }
+    //clean temp list after getValue
+    val list = acc.getField(0).asInstanceOf[ListView[JLong]]
+    list.clear()
+    val retractList = acc.getField(1).asInstanceOf[ListView[JLong]]
+    retractList.clear()
 
     BytesUtil.longsToBytes(result.asJava)
   }
@@ -133,6 +138,12 @@ class IntCollectListFunction extends CollectListFunction[JInteger](DataTypes.INT
         result += iterator.next()
       }
     }
+
+    //clean temp list after getValue
+    val list = acc.getField(0).asInstanceOf[ListView[JInteger]]
+    list.clear()
+    val retractList = acc.getField(1).asInstanceOf[ListView[JInteger]]
+    retractList.clear()
 
     BytesUtil.intsToBytes(result.asJava)
   }
