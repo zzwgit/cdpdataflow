@@ -9,13 +9,11 @@ import org.apache.flink.types.Row
 import java.lang.{Integer => JInteger}
 
 import org.apache.flink.connectors.hbase.table.HBaseTableSchemaV2
-import org.apache.flink.connectors.hbase.table.HBaseValidator.{
-  CONNECTOR_HBASE_CLIENT_PARAM_PREFIX, CONNECTOR_HBASE_TABLE_NAME,
-  CONNECTOR_TYPE_VALUE_HBASE, COLUMNFAMILY_QUALIFIER_DELIMITER_PATTERN
-}
+import org.apache.flink.connectors.hbase.table.HBaseValidator.{COLUMNFAMILY_QUALIFIER_DELIMITER_PATTERN, CONNECTOR_HBASE_CLIENT_PARAM_PREFIX, CONNECTOR_HBASE_TABLE_NAME, CONNECTOR_TYPE_VALUE_HBASE}
 import org.apache.flink.table.api.RichTableSchema
-import org.apache.flink.table.api.types.TypeConverters
+import org.apache.flink.table.api.types.{DataType, TypeConverters}
 import org.apache.flink.table.descriptors.ConnectorDescriptorValidator.{CONNECTOR_PROPERTY_VERSION, CONNECTOR_TYPE, CONNECTOR_VERSION}
+import org.apache.flink.table.descriptors.DescriptorProperties
 import org.apache.flink.table.factories.{BatchTableSinkFactory, BatchTableSourceFactory, StreamTableSinkFactory, StreamTableSourceFactory}
 import org.apache.flink.table.util.TableProperties
 import org.apache.flink.util.StringUtils
@@ -40,14 +38,15 @@ class HBase121TableFactory
   override def requiredContext(): util.Map[String, String] = {
     val context = new util.HashMap[String, String]()
     context.put(CONNECTOR_TYPE, CONNECTOR_TYPE_VALUE_HBASE)
-    context.put(CONNECTOR_VERSION, hbaseVersion())
+    context.put(HBase121Validator.CONNECTOR_HBASE_VERSION, hbaseVersion())
     context.put(CONNECTOR_PROPERTY_VERSION, "1")
     context
   }
 
   override def supportedProperties(): util.List[String] = {
     List(CONNECTOR_HBASE_TABLE_NAME,
-      CONNECTOR_HBASE_CLIENT_PARAM_PREFIX).asJava
+      CONNECTOR_HBASE_CLIENT_PARAM_PREFIX,
+      HBase121Validator.CONNECTOR_HBASE_BATCH_SIZE).asJava
   }
 
   def preCheck(properties: util.Map[String, String]): Unit = {
@@ -66,7 +65,6 @@ class HBase121TableFactory
       }
     }
   }
-
 
   def getTableSchemaFromProperties(properties: util.Map[String, String]): RichTableSchema = {
     val tableProperties = new TableProperties
@@ -101,7 +99,7 @@ class HBase121TableFactory
     val rowKeyType = TypeConverters.createExternalTypeInfoFromDataType(columnTypes(rowKeySourceIndex))
     val hTableSchemaBuilder = new HBaseTableSchemaV2.Builder(rowKey, rowKeyType)
     val qualifierSourceIndexes: util.List[JInteger] = new util.ArrayList[JInteger]()
-    for (idx <- 0 to columnNames.length) {
+    for (idx <- 0 until columnNames.length) {
       if (idx != rowKeySourceIndex) {
         val cfq = columnNames(idx).split(COLUMNFAMILY_QUALIFIER_DELIMITER_PATTERN)
         if (cfq.length != 2) {
@@ -123,17 +121,25 @@ class HBase121TableFactory
     val hTableName = properties.get(CONNECTOR_HBASE_TABLE_NAME)
     val richSchema = getTableSchemaFromProperties(properties)
     val hbaseSchemaInfo = extractHBaseSchemaAndIndexMapping(richSchema)
+    val batchSizeStr = properties.get(HBase121Validator.CONNECTOR_HBASE_BATCH_SIZE)
+    val batchSize = if (null != batchSizeStr) Some(batchSizeStr.toInt) else None
     new HBase121UpsertTableSink(
       richSchema,
       hTableName,
       hbaseSchemaInfo.f0,
       hbaseSchemaInfo.f1,
       hbaseSchemaInfo.f2,
-      createClientConfiguration(properties)).asInstanceOf[TableSink[Row]]
+      createClientConfiguration(properties),
+      batchSize)
+      .configure(richSchema.getColumnNames, richSchema.getColumnTypes.asInstanceOf[Array[DataType]])
+      .asInstanceOf[TableSink[Row]]
   }
 
 
   override def createBatchTableSink(properties: util.Map[String, String]): BatchTableSink[Row] = {
+    val descriptorProperties = new DescriptorProperties()
+    descriptorProperties.putProperties(properties)
+    HBase121Validator.validate(descriptorProperties)
     createTableSink(properties).asInstanceOf[BatchTableSink[Row]]
   }
 

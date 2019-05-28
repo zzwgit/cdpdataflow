@@ -4,7 +4,8 @@ import java.util
 import java.lang.{Boolean => JBool, Integer => JInteger}
 import java.util.Collections
 
-import org.apache.flink.api.java.tuple.Tuple2
+import org.apache.flink.api.common.typeinfo.TypeInformation
+import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2, Tuple3 => JTuple3}
 import org.apache.flink.configuration
 import org.apache.flink.connectors.hbase.streaming.HBaseWriterBase
 import org.apache.flink.connectors.hbase.table.HBaseTableSchemaV2
@@ -14,6 +15,7 @@ import org.apache.flink.table.util.Logging
 import org.apache.flink.types.Row
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.client.{Delete, Mutation, Put}
+
 import scala.collection.JavaConverters._
 
 class HBase121Writer(
@@ -21,15 +23,16 @@ class HBase121Writer(
   hbaseSchema: HBaseTableSchemaV2,
   rowKeySourceIndex: Int,
   qualifierSourceIndexes: util.List[JInteger],
-  hbaseConfiguration: Configuration)
-  extends HBaseWriterBase[Tuple2[JBool, Row]](
+  hbaseConfiguration: Configuration,
+  batchSize: Option[Int])
+  extends HBaseWriterBase[JTuple2[JBool, Row]](
     hbaseTableName,
     hbaseSchema,
     hbaseConfiguration)
   with ListCheckpointed[util.ArrayList[Mutation]]
   with Logging{
 
-  val batchSize = 1000
+  val batchInterval: Int = if (batchSize.isDefined) batchSize.get else 5000
   var batchCounter = 0
   val pendingPuts: util.List[Put] = new util.ArrayList[Put]()
   val pendingDeletes: util.List[Delete] = new util.ArrayList[Delete]()
@@ -37,10 +40,10 @@ class HBase121Writer(
   val restorePuts: util.List[Put] = new util.ArrayList[Put]()
   val restoreDeletes: util.List[Delete] = new util.ArrayList[Delete]()
 
-  val qualifierList = hbaseSchema.getFamilySchema.getFlatByteQualifiers
-  val charset = hbaseSchema.getFamilySchema.getStringCharset
+  val qualifierList: util.List[JTuple3[Array[Byte], Array[Byte], TypeInformation[_]]] = hbaseSchema.getFamilySchema.getFlatByteQualifiers
+  val charset: String = hbaseSchema.getFamilySchema.getStringCharset
   val inputFieldSerializers: util.List[HBaseBytesSerializer] = new util.ArrayList[HBaseBytesSerializer]()
-  val totalQualifiers = hbaseSchema.getFamilySchema.getTotalQualifiers
+  val totalQualifiers: Int = hbaseSchema.getFamilySchema.getTotalQualifiers
 
   for (index <- 0 to totalQualifiers) {
     if (index == rowKeySourceIndex) {
@@ -83,7 +86,7 @@ class HBase121Writer(
     super.open(parameters)
   }
 
-  override def invoke(input: Tuple2[JBool, Row]): Unit = {
+  override def invoke(input: JTuple2[JBool, Row]): Unit = {
     val row = input.f1
     if (null == row){
       return
@@ -107,7 +110,7 @@ class HBase121Writer(
         }
       }
 
-      if (batchCounter < batchSize) {
+      if (batchCounter < batchInterval) {
         pendingPuts.add(put)
         batchCounter += 1
       } else {
@@ -124,7 +127,7 @@ class HBase121Writer(
         }
       }
 
-      if (batchCounter < batchSize) {
+      if (batchCounter < batchInterval) {
         pendingDeletes.add(delete)
         batchCounter += 1
       } else {
@@ -141,6 +144,7 @@ class HBase121Writer(
   }
 
   override def close(): Unit = {
+    LOG.debug("close HBase121Writer and flush pending PUT/DELETE operation")
     flush()
     super.close()
   }
