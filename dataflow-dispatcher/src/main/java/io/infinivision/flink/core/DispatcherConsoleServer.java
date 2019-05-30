@@ -5,10 +5,14 @@ import com.google.common.collect.Maps;
 import io.infinivision.flink.client.LocalExecutorExtend;
 import io.infinivision.flink.entity.CheckPointEntity;
 import io.infinivision.flink.entity.ContextInfoEntity;
-import io.infinivision.flink.handler.*;
+import io.infinivision.flink.handler.EnvHandler;
+import io.infinivision.flink.handler.InfoHandler;
+import io.infinivision.flink.handler.ModifyHandler;
+import io.infinivision.flink.handler.SqlHandler;
 import io.infinivision.flink.parser.OptionsParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.table.client.cli.CliOptionsParser;
 import org.apache.flink.table.client.config.Environment;
@@ -18,7 +22,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URL;
@@ -48,7 +53,7 @@ public class DispatcherConsoleServer {
         dispatcher.dispatching(args);
     }
 
-    public String dispatching(String[] args)  throws Exception {
+    public String dispatching(String[] args) throws Exception {
 
         // get action
         String action = args[0];
@@ -81,6 +86,7 @@ public class DispatcherConsoleServer {
 
 
     private ContextInfoEntity getContextInfoEntity(String[] args) throws IOException, InvocationTargetException, IllegalAccessException, ParseException {
+
         CommandLine commandLine = OptionsParser.argsToCommandLine(args);
         //sessionId
         String sessionId = commandLine.getOptionValue(CliOptionsParser.OPTION_SESSION.getOpt());
@@ -92,35 +98,31 @@ public class DispatcherConsoleServer {
         List<URL> jars = OptionsParser.checkUrls(commandLine, CliOptionsParser.OPTION_JAR);
         //libs
         List<URL> libDirs = OptionsParser.checkUrls(commandLine, CliOptionsParser.OPTION_LIBRARY);
-
-        //checkpoint
-        String checkpointPath = commandLine.getOptionValue(OptionsParser.OPTION_CONF_PATH.getOpt());
-        CheckPointEntity checkPointEntity = JSON.parseObject(readFile(checkpointPath), CheckPointEntity.class);
-//        String interval = commandLine.getOptionValue(OptionsParser.OPTION_CP_INTERVALTIME.getOpt(), "-1");
-//        CheckPointEntity checkPointEntity = new CheckPointEntity(Long.parseLong(interval), commandLine.getOptionValue(OptionsParser.OPTION_CP_MODE.getOpt()), commandLine.getOptionValue(OptionsParser.OPTION_CP_STATEBACKEND.getOpt()), commandLine.getOptionValue(OptionsParser.OPTION_CP_STATECHECKPOINTSDIR.getOpt()));
-
-        //fromSavepoint
-        String fromSavepoint = commandLine.getOptionValue(OptionsParser.OPTION_FROMSAVEPOINT.getOpt());
         //sqlpath
         String sqlPath = commandLine.getOptionValue(OptionsParser.OPTION_SQLPATH.getOpt());
 
-        // SessionContext
+        // create SessionContext by user define (environment)
         Environment sessionEnv = null == environment ? new Environment() : Environment.parse(environment);
+        Map<String, String> deploymentMap = sessionEnv.getDeployment().asMap();
 
-        Map<String, Object> sp = Maps.newHashMap();
-//        sp.put("-m", "yarn-cluster");
-//        sp.put("-yn", "1");
-//        sp.put("-ys", "1");
-//        sp.put("-yjm", "2048");
-//        sp.put("-ytm", "2048");
+        //set checkpoint by read from environment
+        Long intervalTime = MapUtils.getLong(deploymentMap, "checkpoint.intervalTime", -1L);
+        String mode = MapUtils.getString(deploymentMap, "checkpoint.mode", "");
+        String stateBackend = MapUtils.getString(deploymentMap, "checkpoint.stateBackend", "");
+        String stateCheckpointsDir = MapUtils.getString(deploymentMap, "checkpoint.stateCheckpointsDir", "");
+        CheckPointEntity checkPointEntity = new CheckPointEntity(intervalTime, mode, stateBackend, stateCheckpointsDir);
 
+        //set fromSavepoint by read from environment
+        String fromSavepoint = MapUtils.getString(deploymentMap, "fromSavepoint", "");
+//        String fromSavepoint = commandLine.getOptionValue(OptionsParser.OPTION_FROMSAVEPOINT.getOpt());
+//        Map<String, Object> sp = Maps.newHashMap();
         // fromsavepoints (ps:ConfigUtil.normalizeYaml中会将key转换为小写)
-        if (StringUtils.isNotEmpty(fromSavepoint)) {
-            sp.put("-s", fromSavepoint);
-            sp.put("-n", "true");
-        }
-        sp.putAll(sessionEnv.getDeployment().asMap());
-        sessionEnv.setDeployment(sp);
+//        if (StringUtils.isNotEmpty(fromSavepoint)) {
+//            sp.put("-s", fromSavepoint);
+//            sp.put("-n", "true");
+//        }
+//        sp.putAll(sessionEnv.getDeployment().asMap());
+//        sessionEnv.setDeployment(sp);
 
         SessionContext sessionContext = new SessionContext(sessionId, sessionEnv);
 
@@ -146,7 +148,7 @@ public class DispatcherConsoleServer {
      */
     public String readFile(String path) {
 
-        if(StringUtils.isEmpty(path)){
+        if (StringUtils.isEmpty(path)) {
             return null;
         }
 

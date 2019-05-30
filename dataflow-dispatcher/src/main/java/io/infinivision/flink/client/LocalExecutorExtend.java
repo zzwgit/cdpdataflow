@@ -627,7 +627,6 @@ public class LocalExecutorExtend implements Executor {
      * @param session
      * @param statement
      * @return
-     * @throws SqlExecutionException
      */
     public ProgramTargetDescriptor commitJob(SessionContext session, String statement) throws SqlExecutionException {
         final ExecutionContext<?> context = getOrCreateExecutionContext(session);
