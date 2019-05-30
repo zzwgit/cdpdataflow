@@ -15,7 +15,7 @@ import org.apache.flink.table.api.scala._
 
 import scala.collection.mutable
 
-abstract class CollectListFunction[E](valueType: DataType) extends AggregateFunction[Array[Byte], GenericRow] {
+abstract class ToBitMapFunction[E](valueType: DataType) extends AggregateFunction[Array[Byte], GenericRow] {
   def accumulate(acc: GenericRow, value: E): Unit = {
     val list = acc.getField(0).asInstanceOf[ListView[E]]
     if (value != null) {
@@ -108,7 +108,7 @@ abstract class CollectListFunction[E](valueType: DataType) extends AggregateFunc
 
 }
 
-class LongCollectListFunction extends CollectListFunction[JLong](DataTypes.LONG) {
+class LongToBitMapFunction extends ToBitMapFunction[JLong](DataTypes.LONG) {
   override def getValue(acc: GenericRow): Array[Byte] = {
     val result = new mutable.ArrayBuffer[JLong]
     val iter = acc.getField(0).asInstanceOf[ListView[JLong]].get
@@ -116,19 +116,16 @@ class LongCollectListFunction extends CollectListFunction[JLong](DataTypes.LONG)
       val iterator = iter.iterator()
       while (iterator.hasNext) {
         result += iterator.next()
+        // we can safely remove the element after we get the value
+        iterator.remove()
       }
     }
-    //clean temp list after getValue
-    val list = acc.getField(0).asInstanceOf[ListView[JLong]]
-    list.clear()
-    val retractList = acc.getField(1).asInstanceOf[ListView[JLong]]
-    retractList.clear()
 
     BytesUtil.longsToBytes(result.asJava)
   }
 }
 
-class IntCollectListFunction extends CollectListFunction[JInteger](DataTypes.INT) {
+class IntToBitMapFunction extends ToBitMapFunction[JInteger](DataTypes.INT) {
   override def getValue(acc: GenericRow): Array[Byte] = {
     val result = new mutable.ArrayBuffer[JInteger]
     val iter = acc.getField(0).asInstanceOf[ListView[JInteger]].get
@@ -136,14 +133,9 @@ class IntCollectListFunction extends CollectListFunction[JInteger](DataTypes.INT
       val iterator = iter.iterator()
       while (iterator.hasNext) {
         result += iterator.next()
+        iterator.remove()
       }
     }
-
-    //clean temp list after getValue
-    val list = acc.getField(0).asInstanceOf[ListView[JInteger]]
-    list.clear()
-    val retractList = acc.getField(1).asInstanceOf[ListView[JInteger]]
-    retractList.clear()
 
     BytesUtil.intsToBytes(result.asJava)
   }

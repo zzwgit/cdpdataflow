@@ -20,19 +20,20 @@ class HBase121UpsertTableSink(
   hbaseTableSchema: HBaseTableSchemaV2,
   rowKeyIndex: JInteger,
   qualifierSourceIndexes: util.List[JInteger],
-  hbaseConfiguration: Configuration)
+  hbaseConfiguration: Configuration,
+  batchSize: Option[Int])
   extends TableSinkBase[JTuple2[JBool, Row]]
     with UpsertStreamTableSink[Row]
     with BatchCompatibleStreamTableSink[JTuple2[JBool, Row]]
     with Logging  {
 
   override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]]): DataStreamSink[_] = {
-    val hbaseSink = new HBase121Writer(hbaseTableName, hbaseTableSchema, rowKeyIndex, qualifierSourceIndexes, hbaseConfiguration)
+    val hbaseSink = new HBase121Writer(hbaseTableName, hbaseTableSchema, rowKeyIndex, qualifierSourceIndexes, hbaseConfiguration, batchSize)
     dataStream.addSink(hbaseSink).name(hbaseSink.toString)
   }
 
   override def emitBoundedStream(boundedStream: DataStream[JTuple2[JBool, Row]]): DataStreamSink[_] = {
-    val hbaseSink = new HBase121Writer(hbaseTableName, hbaseTableSchema, rowKeyIndex, qualifierSourceIndexes, hbaseConfiguration)
+    val hbaseSink = new HBase121Writer(hbaseTableName, hbaseTableSchema, rowKeyIndex, qualifierSourceIndexes, hbaseConfiguration, batchSize)
     boundedStream.addSink(hbaseSink).name(hbaseSink.toString)
   }
 
@@ -52,7 +53,8 @@ class HBase121UpsertTableSink(
       hbaseTableSchema,
       rowKeyIndex,
       qualifierSourceIndexes,
-      hbaseConfiguration
+      hbaseConfiguration,
+      batchSize
     )
   }
 

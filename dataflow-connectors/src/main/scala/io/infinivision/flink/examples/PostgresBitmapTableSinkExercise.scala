@@ -1,7 +1,7 @@
 package io.infinivision.flink.examples
 
 import io.infinivision.flink.connectors.postgres.PostgresTableFactory
-import io.infinivision.flink.udfs.{IntCollectListFunction, LongCollectListFunction}
+import io.infinivision.flink.udfs.{IntToBitMapFunction, LongToBitMapFunction}
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 import org.apache.flink.table.api.{RichTableSchema, TableEnvironment}
 import org.apache.flink.table.api.types.{DataTypes, InternalType}
@@ -59,7 +59,7 @@ object PostgresBitmapTableSinkExercise {
     val postgresTableFactory = new PostgresTableFactory
     val postgresTableSink = postgresTableFactory.createStreamTableSink(postgresSinkTableProperties.toMap)
     tEnv.registerTableSink("output", postgresTableSink)
-    tEnv.registerFunction("int_collect_list", new IntCollectListFunction)
+    tEnv.registerFunction("int_collect_list", new IntToBitMapFunction)
 
     // sql update
     val sql =
