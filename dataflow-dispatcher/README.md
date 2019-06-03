@@ -3,28 +3,28 @@
 1.任务提交   
 1.1 通过console方式：
 ```
-./flink-sql.sh run -s test -confPath hdfs:///flink-sql-test-data/conf.json -sqlPath hdfs:///flink-sql-test-data/test_kafka_hdfs.sql
+./flink-sql.sh run -s test -sqlPath hdfs:///flink-sql-test-data/test_kafka_hdfs.sql
 
 参数定义：
 会话名称        -s test 
 默认环境配置    -d /bigdata/flink-1.5.1/conf/sql-client-defaults.yaml 
-指定环境配置    -e /bigdata/flink-1.5.1/conf/sql-client-defaults.yaml 
+指定环境配置    -e /bigdata/flink-1.5.1/conf/sql-client.yaml 
 自定义jar lib   -l /bigdata/flink-1.5.1/opt
 自定义jar       -j /bigdata/flink-1.5.1/opt/xxx.jar
-配置文件位置    -confPath hdfs:///flink-sql-test-data/conf.json
 sql文件位置     -sqlPath hdfs:///flink-sql-test-data/test_kafka_hdfs.sql
-从保存点恢复    -fromSavepoint hdfs:///flink-checkpoints/test_join_pg_s/5395ccb928083875b088b1d640e69266/chk-3
 
-配置conf.json(checkpoint部分)
-{
-	"intervalTime": 10000,
-	"minPauseBetweenCheckpoints": 1000,
-	"checkpointTimeout": 1000,
-	"mode": "EXACTLY_ONCE",
-	"enableExternalizedCheckpoint": true,
-	"stateBackend": "filesystem",
-	"stateCheckpointsDir": "hdfs:///flink-checkpoints/test_join_pg_s"
-}
+环境配置sql-client.yaml deployment节点部分配置说明：
+  #checkpoint配置
+  checkpoint:
+    intervalTime: 10000
+    minPauseBetweenCheckpoints: 1000
+    checkpointTimeout: 1000
+    mode: EXACTLY_ONCE
+    enableExternalizedCheckpoint: true
+    stateBackend: filesystem
+    stateCheckpointsDir: hdfs:///flink-checkpoints/test_join_pg_s
+  #restore from checkpoint 从保存点恢复
+  fromSavepoint: hdfs:///flink-checkpoints/test_join_pg_s/5395ccb928083875b088b1d640e69266/chk-3
 
 ```
 1.2通过http方式：   
@@ -48,23 +48,23 @@ step2. 通过post请求提交
 参数定义：
 会话名称        s test 
 默认环境配置    d /bigdata/flink-1.5.1/conf/sql-client-defaults.yaml 
-指定环境配置    e /bigdata/flink-1.5.1/conf/sql-client-defaults.yaml 
+指定环境配置    e /bigdata/flink-1.5.1/conf/sql-client.yaml 
 自定义jar lib   l /bigdata/flink-1.5.1/opt
 自定义jar       j /bigdata/flink-1.5.1/opt/xxx.jar
-配置文件位置    confPath hdfs:///flink-sql-test-data/conf.json
 sql文件位置     sqlPath hdfs:///flink-sql-test-data/test_kafka_hdfs.sql
-从保存点恢复    fromSavepoint hdfs:///flink-checkpoints/test_join_pg_s/5395ccb928083875b088b1d640e69266/chk-3
 
-配置conf.json(checkpoint部分)
-{
-	"intervalTime": 10000,
-	"minPauseBetweenCheckpoints": 1000,
-	"checkpointTimeout": 1000,
-	"mode": "EXACTLY_ONCE",
-	"enableExternalizedCheckpoint": true,
-	"stateBackend": "filesystem",
-	"stateCheckpointsDir": "hdfs:///flink-checkpoints/test_join_pg_s"
-}
+环境配置sql-client.yaml deployment节点部分配置说明：
+  #checkpoint配置
+  checkpoint:
+    intervalTime: 10000
+    minPauseBetweenCheckpoints: 1000
+    checkpointTimeout: 1000
+    mode: EXACTLY_ONCE
+    enableExternalizedCheckpoint: true
+    stateBackend: filesystem
+    stateCheckpointsDir: hdfs:///flink-checkpoints/test_join_pg_s
+  #restore from checkpoint 从保存点恢复
+  fromSavepoint: hdfs:///flink-checkpoints/test_join_pg_s/5395ccb928083875b088b1d640e69266/chk-3
 
 ```
 
