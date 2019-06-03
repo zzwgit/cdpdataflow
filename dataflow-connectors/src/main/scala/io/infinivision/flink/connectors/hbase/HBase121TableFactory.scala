@@ -4,7 +4,7 @@ import java.util
 
 import org.apache.flink.api.java.tuple.{Tuple3 => JTuple3}
 import org.apache.flink.table.sinks.{BatchTableSink, StreamTableSink, TableSink}
-import org.apache.flink.table.sources.{BatchTableSource, StreamTableSource}
+import org.apache.flink.table.sources.{BatchTableSource, StreamTableSource, TableSource}
 import org.apache.flink.types.Row
 import java.lang.{Integer => JInteger}
 
@@ -12,10 +12,9 @@ import org.apache.flink.connectors.hbase.table.HBaseTableSchemaV2
 import org.apache.flink.connectors.hbase.table.HBaseValidator.{COLUMNFAMILY_QUALIFIER_DELIMITER_PATTERN, CONNECTOR_HBASE_CLIENT_PARAM_PREFIX, CONNECTOR_HBASE_TABLE_NAME, CONNECTOR_TYPE_VALUE_HBASE}
 import org.apache.flink.table.api.RichTableSchema
 import org.apache.flink.table.api.types.{DataType, TypeConverters}
-import org.apache.flink.table.descriptors.ConnectorDescriptorValidator.{CONNECTOR_PROPERTY_VERSION, CONNECTOR_TYPE, CONNECTOR_VERSION}
-import org.apache.flink.table.descriptors.DescriptorProperties
+import org.apache.flink.table.descriptors.ConnectorDescriptorValidator.{CONNECTOR_PROPERTY_VERSION, CONNECTOR_TYPE}
 import org.apache.flink.table.factories.{BatchTableSinkFactory, BatchTableSourceFactory, StreamTableSinkFactory, StreamTableSourceFactory}
-import org.apache.flink.table.util.TableProperties
+import org.apache.flink.table.util.{Logging, TableProperties}
 import org.apache.flink.util.StringUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.{HBaseConfiguration, HConstants}
@@ -29,7 +28,8 @@ class HBase121TableFactory
   extends StreamTableSourceFactory[Row]
     with StreamTableSinkFactory[Row]
     with BatchTableSourceFactory[Row]
-    with BatchTableSinkFactory[Row] {
+    with BatchTableSinkFactory[Row]
+    with Logging {
 
   val HBASE_VERSION = "1.2.1"
 
@@ -46,7 +46,7 @@ class HBase121TableFactory
   override def supportedProperties(): util.List[String] = {
     List(CONNECTOR_HBASE_TABLE_NAME,
       CONNECTOR_HBASE_CLIENT_PARAM_PREFIX,
-      HBase121Validator.CONNECTOR_HBASE_BATCH_SIZE).asJava
+      HBase121Validator.CONNECTOR_HBASE_BATCH_SIZE.key()).asJava
   }
 
   def preCheck(properties: util.Map[String, String]): Unit = {
@@ -117,9 +117,16 @@ class HBase121TableFactory
   }
 
   def createTableSink(properties: util.Map[String, String]): TableSink[Row] = {
-    preCheck(properties)
     val hTableName = properties.get(CONNECTOR_HBASE_TABLE_NAME)
-    val richSchema = getTableSchemaFromProperties(properties)
+    // construct the TableProperties
+    val tableProperties = new TableProperties
+    tableProperties.putProperties(properties)
+
+    // validate properties
+    val validator = new HBase121Validator
+    validator.validateTableOptions(tableProperties.toMap)
+    val richSchema = tableProperties.readSchemaFromProperties(null)
+
     val hbaseSchemaInfo = extractHBaseSchemaAndIndexMapping(richSchema)
     val batchSizeStr = properties.get(HBase121Validator.CONNECTOR_HBASE_BATCH_SIZE)
     val batchSize = if (null != batchSizeStr) Some(batchSizeStr.toInt) else None
@@ -136,10 +143,34 @@ class HBase121TableFactory
   }
 
 
+  def createTableSource(properties: util.Map[String, String]): TableSource = {
+    val hTableName = properties.get(CONNECTOR_HBASE_TABLE_NAME)
+    val conf = HBaseConfiguration.create()
+    properties.put(HConstants.ZOOKEEPER_QUORUM, conf.get(HConstants.ZOOKEEPER_QUORUM))
+    properties.put(HBase121Validator.ASYNC_KERBEROS_REGIONSERVER_PRINCIPAL.key(),
+      conf.get(HBase121Validator.HBASE_REGIONSERVER_KERBEROS_PRINCIPAL))
+    // construct the TableProperties
+    val tableProperties = new TableProperties
+    tableProperties.putProperties(properties)
+
+    // validate properties
+    val validator = new HBase121Validator
+    validator.validateTableOptions(tableProperties.toMap)
+    val richTableSchema = tableProperties.readSchemaFromProperties(null)
+    val hbaseSchemaInfo = extractHBaseSchemaAndIndexMapping(richTableSchema)
+    new HBase121TableSource(
+      tableProperties,
+      richTableSchema,
+      hTableName,
+      hbaseSchemaInfo.f0,
+      hbaseSchemaInfo.f1,
+      hbaseSchemaInfo.f2,
+      conf
+    )
+
+  }
+
   override def createBatchTableSink(properties: util.Map[String, String]): BatchTableSink[Row] = {
-    val descriptorProperties = new DescriptorProperties()
-    descriptorProperties.putProperties(properties)
-    HBase121Validator.validate(descriptorProperties)
     createTableSink(properties).asInstanceOf[BatchTableSink[Row]]
   }
 

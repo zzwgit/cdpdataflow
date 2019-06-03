@@ -1,6 +1,7 @@
 package io.infinivision.flink.connectors.postgres;
 
 import io.infinivision.flink.connectors.jdbc.BaseRowJDBCInputFormat;
+import io.infinivision.flink.connectors.utils.CommonTableOptions;
 import io.infinivision.flink.connectors.utils.JDBCTableOptions;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.io.jdbc.JDBCOptions;
@@ -182,7 +183,6 @@ public class PostgresTableSource implements
     @Override
     public TableFunction<BaseRow> getLookupFunction(int[] lookupKeys) {
         // validate lookup config
-        new PostgresValidator().validateTableLookupOptions(tableProperties.toMap());
         String queryTemplate = buildLookupQueryTemplate(lookupKeys);
         return new PostgresLookupFunction(createInputFormat(queryTemplate), returnType);
     }
@@ -190,7 +190,6 @@ public class PostgresTableSource implements
     @Override
     public AsyncTableFunction<BaseRow> getAsyncLookupFunction(int[] lookupKeys) {
         // validate lookup config
-        new PostgresValidator().validateTableLookupOptions(tableProperties.toMap());
         String queryTemplate = buildLookupQueryTemplate(lookupKeys);
         return new PostgresAsyncLookupFunction(tableProperties, queryTemplate, returnType);
     }
@@ -198,18 +197,18 @@ public class PostgresTableSource implements
     @Override
     public LookupConfig getLookupConfig() {
         LookupConfig config = new LookupConfig();
-        String mode = tableProperties.getString(JDBCTableOptions.MODE);
+        String mode = tableProperties.getString(CommonTableOptions.MODE);
         boolean isAsync = false;
-        if (mode.equalsIgnoreCase(JDBCTableOptions.JOIN_MODE.ASYNC.name())) {
+        if (mode.equalsIgnoreCase(CommonTableOptions.JOIN_MODE.ASYNC.name())) {
             isAsync = true;
         }
 
         if (isAsync) {
             config.setAsyncEnabled(true);
-            String timeout = tableProperties.getString(JDBCTableOptions.TIMEOUT);
+            String timeout = tableProperties.getString(CommonTableOptions.TIMEOUT);
             config.setAsyncTimeoutMs(Integer.valueOf(timeout));
 
-            String capacity = tableProperties.getString(JDBCTableOptions.BUFFER_CAPACITY);
+            String capacity = tableProperties.getString(CommonTableOptions.BUFFER_CAPACITY);
             config.setAsyncBufferCapacity(Integer.valueOf(capacity));
             config.setAsyncOutputMode(LookupConfig.AsyncOutputMode.ORDERED);
         }

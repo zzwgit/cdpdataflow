@@ -39,7 +39,7 @@ public class PostgresTableFactory implements
         TableProperties prop = new TableProperties();
         prop.putProperties(properties);
 
-        new PostgresValidator().validateTableOptions(properties);
+        PostgresValidator.validateTableOptions(properties);
 
         RichTableSchema schema = prop.readSchemaFromProperties(
                 Thread.currentThread().getContextClassLoader()
@@ -98,7 +98,7 @@ public class PostgresTableFactory implements
         TableProperties prop = new TableProperties();
         prop.putProperties(properties);
 
-        new PostgresValidator().validateTableOptions(properties);
+        PostgresValidator.validateTableOptions(properties);
 
         RichTableSchema schema = prop.readSchemaFromProperties(
                 Thread.currentThread().getContextClassLoader()

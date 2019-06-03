@@ -7,7 +7,7 @@ import java.util.List;
 
 import static org.apache.flink.configuration.ConfigOptions.key;
 
-public class CommonTableOptions {
+public abstract class CommonTableOptions {
     public enum JOIN_MODE {
         SYNC,
         ASYNC;
@@ -37,7 +37,7 @@ public class CommonTableOptions {
 
     // database version
     public static final ConfigOption<String> VERSION = key("version".toLowerCase())
-            .defaultValue("9.5");
+            .noDefaultValue();
 
     // database update mode
     public static final ConfigOption<String> UPDATE_MODE = key("updateMode".toLowerCase())
