@@ -46,7 +46,7 @@ class HBaseAsyncLookupFunction(
   // hbase table
 //  protected var hTable: HTable = _
 
-  private var hClient: HBaseClient = _
+  @transient private var hClient: HBaseClient = _
 
   for (index <- 0 to totalQualifiers) {
     if (index == rowKeySourceIndex) {
@@ -77,7 +77,7 @@ class HBaseAsyncLookupFunction(
     super.close()
 
     if (null != hClient) {
-
+      hClient.shutdown().join(5000)
     }
     LOG.info("end close HBaseAsyncLookupFunction...")
 

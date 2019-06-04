@@ -5,14 +5,17 @@ import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment
 import org.apache.flink.table.api.{RichTableSchema, TableSchema}
 import org.apache.flink.table.api.functions.{AsyncTableFunction, TableFunction}
-import org.apache.flink.table.api.types.DataType
+import org.apache.flink.table.api.types.{DataType, RowType, TypeConverters}
 import org.apache.flink.table.plan.stats.TableStats
 import org.apache.flink.table.sources.{BatchTableSource, LookupConfig, LookupableTableSource, StreamTableSource}
 import org.apache.flink.types.Row
-import java.lang.{Boolean => JBool, Integer => JInteger}
+import java.lang.{Integer => JInteger}
 import java.util
 
 import io.infinivision.flink.connectors.utils.CommonTableOptions
+import org.apache.flink.api.common.io.InputFormat
+import org.apache.flink.core.io.InputSplit
+import org.apache.flink.table.dataformat.BaseRow
 import org.apache.flink.table.util.{TableProperties, TableSchemaUtil}
 import org.apache.hadoop.conf.Configuration
 
@@ -24,27 +27,37 @@ class HBase121TableSource(
   rowKeyIndex: Int,
   qualifierSourceIndexes: util.List[JInteger],
   hbaseConfiguration: Configuration)
-  extends StreamTableSource[Row]
-  with BatchTableSource[Row]
+  extends StreamTableSource[BaseRow]
+  with BatchTableSource[BaseRow]
   with LookupableTableSource[Row] {
+
+  private val returnType = TypeConverters.toBaseRowTypeInfo(tableSchema.getResultRowType.asInstanceOf[RowType])
 
   override def getTableSchema: TableSchema = {
     val rowKey = tableSchema.getColumnNames()(rowKeyIndex)
     TableSchemaUtil.builderFromDataType(getReturnType).primaryKey(rowKey).build()
   }
 
-  override def getDataStream(execEnv: StreamExecutionEnvironment): DataStream[Row] = {
-    throw new UnsupportedOperationException("HBase Table can not be convert to DataStream currently," +
-      " only temporal table join support")
+  override def getDataStream(execEnv: StreamExecutionEnvironment): DataStream[BaseRow] = {
+    execEnv.createInput(
+      new HBase121RowInputFormat(hbaseConfiguration, hbaseTableName, hbaseTableSchema, rowKeyIndex, qualifierSourceIndexes, returnType)
+        .asInstanceOf[InputFormat[BaseRow, InputSplit]],
+      TypeConverters.toBaseRowTypeInfo(getReturnType.asInstanceOf[RowType]),
+      explainSource()
+    )
   }
 
-  override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[Row] = {
-    throw new UnsupportedOperationException("HBase Table can not be convert to BoundedDataStream currently," +
-      " only temporal table join support")
+  override def getBoundedStream(streamEnv: StreamExecutionEnvironment): DataStream[BaseRow] = {
+    streamEnv.createInput(
+      new HBase121RowInputFormat(hbaseConfiguration, hbaseTableName, hbaseTableSchema, rowKeyIndex, qualifierSourceIndexes, returnType)
+        .asInstanceOf[InputFormat[BaseRow, InputSplit]],
+      TypeConverters.toBaseRowTypeInfo(getReturnType.asInstanceOf[RowType]),
+      explainSource()
+    )
   }
 
   override def getLookupFunction(lookupKeys: Array[Int]): TableFunction[Row] = {
-    if (lookupKeys == null || lookupKeys.length != 1) {
+    if (lookupKeys == null || lookupKeys.length != 1 || rowKeyIndex != lookupKeys(0)) {
       throw new RuntimeException("HBase table can only be join on RowKey for now")
     }
     new HBaseLookupFunction(

@@ -170,12 +170,17 @@ class HBase121TableFactory
 
   }
 
+  def validateCommonTableOptions(properties: util.Map[String, String]): Unit = {
+    val validator = new HBase121Validator
+    validator.validateTableOptions(properties)
+  }
+
   override def createBatchTableSink(properties: util.Map[String, String]): BatchTableSink[Row] = {
     createTableSink(properties).asInstanceOf[BatchTableSink[Row]]
   }
 
   override def createBatchTableSource(properties: util.Map[String, String]): BatchTableSource[Row] = {
-    throw new IllegalArgumentException("HBase as the batch table source was not supported so far...")
+    createTableSource(properties).asInstanceOf[BatchTableSource[Row]]
   }
 
   override def createStreamTableSink(properties: util.Map[String, String]): StreamTableSink[Row] = {
@@ -183,7 +188,7 @@ class HBase121TableFactory
   }
 
   override def createStreamTableSource(properties: util.Map[String, String]): StreamTableSource[Row] = {
-    throw new IllegalArgumentException("HBase as the stream table source was not supported so far...")
+    createTableSource(properties).asInstanceOf[StreamTableSource[Row]]
   }
 
 }
