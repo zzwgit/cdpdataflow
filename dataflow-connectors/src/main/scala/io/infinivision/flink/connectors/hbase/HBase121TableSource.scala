@@ -12,10 +12,11 @@ import org.apache.flink.types.Row
 import java.lang.{Integer => JInteger}
 import java.util
 
-import io.infinivision.flink.connectors.utils.CommonTableOptions
+import io.infinivision.flink.connectors.utils.{CommonTableOptions, CommonTableOptionsValidator}
 import org.apache.flink.api.common.io.InputFormat
 import org.apache.flink.core.io.InputSplit
 import org.apache.flink.table.dataformat.BaseRow
+import org.apache.flink.table.descriptors.DescriptorProperties
 import org.apache.flink.table.util.{TableProperties, TableSchemaUtil}
 import org.apache.hadoop.conf.Configuration
 
@@ -29,7 +30,7 @@ class HBase121TableSource(
   hbaseConfiguration: Configuration)
   extends StreamTableSource[BaseRow]
   with BatchTableSource[BaseRow]
-  with LookupableTableSource[Row] {
+  with LookupableTableSource[BaseRow] {
 
   private val returnType = TypeConverters.toBaseRowTypeInfo(tableSchema.getResultRowType.asInstanceOf[RowType])
 
@@ -56,22 +57,37 @@ class HBase121TableSource(
     )
   }
 
-  override def getLookupFunction(lookupKeys: Array[Int]): TableFunction[Row] = {
+  override def getLookupFunction(lookupKeys: Array[Int]): TableFunction[BaseRow] = {
     if (lookupKeys == null || lookupKeys.length != 1 || rowKeyIndex != lookupKeys(0)) {
-      throw new RuntimeException("HBase table can only be join on RowKey for now")
+      throw new RuntimeException("HBase table Lookup Function can only be join on RowKey for now")
     }
-    new HBaseLookupFunction(
-      tableSchema,
-      hbaseTableName,
-      hbaseTableSchema,
-      rowKeyIndex,
-      qualifierSourceIndexes,
-      hbaseConfiguration
-    )
+
+    throw new RuntimeException("TODO: HBase TableFunction was not supported so far")
+//    new HBaseLookupFunction(
+//      tableSchema,
+//      hbaseTableName,
+//      hbaseTableSchema,
+//      rowKeyIndex,
+//      qualifierSourceIndexes,
+//      hbaseConfiguration
+//    )
   }
 
-  override def getAsyncLookupFunction(lookupKeys: Array[Int]): AsyncTableFunction[Row] = {
+  override def getAsyncLookupFunction(lookupKeys: Array[Int]): AsyncTableFunction[BaseRow] = {
+    if (lookupKeys == null || lookupKeys.length != 1 || rowKeyIndex != lookupKeys(0)) {
+      throw new RuntimeException("HBase table Lookup Function can only be join on RowKey for now")
+    }
+
+    // validate Async Lookup options
+    val properties = new DescriptorProperties()
+    properties.putProperties(tableProperties.toMap)
+    CommonTableOptionsValidator.validateCacheOption(properties)
+    CommonTableOptionsValidator.validateTableLookupOptions(properties)
+    val hbaseValidator = new HBase121Validator
+    hbaseValidator.validateAuthLoginOption(properties)
+
     new HBaseAsyncLookupFunction(
+      tableProperties,
       tableSchema,
       hbaseTableName,
       hbaseTableSchema,

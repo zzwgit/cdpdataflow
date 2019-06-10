@@ -8,6 +8,7 @@ import org.apache.flink.table.sources.{BatchTableSource, StreamTableSource, Tabl
 import org.apache.flink.types.Row
 import java.lang.{Integer => JInteger}
 
+import io.infinivision.flink.connectors.utils.CommonTableOptions
 import org.apache.flink.connectors.hbase.table.HBaseTableSchemaV2
 import org.apache.flink.connectors.hbase.table.HBaseValidator.{COLUMNFAMILY_QUALIFIER_DELIMITER_PATTERN, CONNECTOR_HBASE_CLIENT_PARAM_PREFIX, CONNECTOR_HBASE_TABLE_NAME, CONNECTOR_TYPE_VALUE_HBASE}
 import org.apache.flink.table.api.RichTableSchema
@@ -44,9 +45,9 @@ class HBase121TableFactory
   }
 
   override def supportedProperties(): util.List[String] = {
-    List(CONNECTOR_HBASE_TABLE_NAME,
-      CONNECTOR_HBASE_CLIENT_PARAM_PREFIX,
-      HBase121Validator.CONNECTOR_HBASE_BATCH_SIZE.key()).asJava
+    val supportedProperties = List(CONNECTOR_HBASE_TABLE_NAME,
+      CONNECTOR_HBASE_CLIENT_PARAM_PREFIX) ++ HBase121Validator.SUPPORTED_KEYS ++ CommonTableOptions.SUPPORTED_KEYS.asScala
+    supportedProperties.asJava
   }
 
   def preCheck(properties: util.Map[String, String]): Unit = {
@@ -117,14 +118,13 @@ class HBase121TableFactory
   }
 
   def createTableSink(properties: util.Map[String, String]): TableSink[Row] = {
+    // validate HBase common options
+    validateCommonTableOptions(properties)
+
     val hTableName = properties.get(CONNECTOR_HBASE_TABLE_NAME)
     // construct the TableProperties
     val tableProperties = new TableProperties
     tableProperties.putProperties(properties)
-
-    // validate properties
-    val validator = new HBase121Validator
-    validator.validateTableOptions(tableProperties.toMap)
     val richSchema = tableProperties.readSchemaFromProperties(null)
 
     val hbaseSchemaInfo = extractHBaseSchemaAndIndexMapping(richSchema)
@@ -142,20 +142,22 @@ class HBase121TableFactory
       .asInstanceOf[TableSink[Row]]
   }
 
-
   def createTableSource(properties: util.Map[String, String]): TableSource = {
+    // validate HBase common options
+    validateCommonTableOptions(properties)
+
     val hTableName = properties.get(CONNECTOR_HBASE_TABLE_NAME)
     val conf = HBaseConfiguration.create()
     properties.put(HConstants.ZOOKEEPER_QUORUM, conf.get(HConstants.ZOOKEEPER_QUORUM))
     properties.put(HBase121Validator.ASYNC_KERBEROS_REGIONSERVER_PRINCIPAL.key(),
       conf.get(HBase121Validator.HBASE_REGIONSERVER_KERBEROS_PRINCIPAL))
+
     // construct the TableProperties
     val tableProperties = new TableProperties
     tableProperties.putProperties(properties)
 
-    // validate properties
-    val validator = new HBase121Validator
-    validator.validateTableOptions(tableProperties.toMap)
+    LOG.info(s"CreateTableSource TableProperties: $tableProperties")
+
     val richTableSchema = tableProperties.readSchemaFromProperties(null)
     val hbaseSchemaInfo = extractHBaseSchemaAndIndexMapping(richTableSchema)
     new HBase121TableSource(

@@ -6,8 +6,21 @@ import org.apache.hadoop.hbase.{CellUtil, HBaseConfiguration, HConstants, TableN
 
 import scala.collection.JavaConverters._
 
+import org.hbase.async.{Bytes => aBytes}
 object HBaseClientExercise {
   def main(args: Array[String]): Unit = {
+    val value = 1234
+    val bs = Bytes.toBytes(value)
+    println("sync bytes")
+    bs.foreach(println)
+    println("async bytes")
+    val abs = aBytes.fromInt(value)
+    abs.foreach(println)
+
+    println(Bytes.toInt(abs))
+    println(aBytes.getInt(abs))
+
+
     val conf = HBaseConfiguration.create()
     val tableName = "infinivision:ad_feature"
     val rowKey = 2118

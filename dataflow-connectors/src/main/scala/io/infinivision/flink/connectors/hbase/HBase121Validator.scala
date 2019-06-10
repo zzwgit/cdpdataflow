@@ -2,7 +2,6 @@ package io.infinivision.flink.connectors.hbase
 
 import java.util
 
-import io.infinivision.flink.connectors.hbase.HBase121Validator.AuthMode.AuthMode
 import io.infinivision.flink.connectors.utils.CommonTableOptionsValidator
 import org.apache.flink.configuration.{ConfigOption, ConfigOptions}
 import org.apache.flink.connectors.hbase.table.HBaseValidator.CONNECTOR_HBASE_TABLE_NAME
@@ -17,7 +16,7 @@ import scala.collection.JavaConverters._
 class HBase121Validator extends Logging{
 
   def validateTableOptions(properties: util.Map[String, String]): Unit ={
-    LOG.info(s"HBase Properties: $properties")
+    LOG.info(s"ValidateTableOptions HBase Properties: $properties")
     val descriptorProperties = new DescriptorProperties()
     descriptorProperties.putProperties(properties)
     // validate table Name
@@ -39,15 +38,6 @@ class HBase121Validator extends Logging{
 
     //for HBase put / get / delete batch operation
     validateBatchSize(descriptorProperties)
-
-    // validate cache(LRU/ALL/NONE)
-//    CommonTableOptionsValidator.validateCacheOption(descriptorProperties)
-
-    // validate Lookup options
-//    CommonTableOptionsValidator.validateTableLookupOptions(descriptorProperties)
-
-    // validate auth
-//    validateAuthLoginOption(descriptorProperties)
   }
 
   def validateVersion(properties: DescriptorProperties): Unit = {
@@ -108,11 +98,11 @@ object HBase121Validator {
     .defaultValue(10000)
 
   // async Auth Login
-  val ASYNC_SECURITY_AUTH_ENABLE: ConfigOption[Boolean] = ConfigOptions.key("hbase.security.auth.enable")
-    .defaultValue(true)
+  val ASYNC_SECURITY_AUTH_ENABLE: ConfigOption[String] = ConfigOptions.key("hbase.security.auth.enable")
+    .defaultValue("true")
 
-    val ASYNC_SECURITY_AUTHENTICATION: ConfigOption[AuthMode] = ConfigOptions.key("hbase.security.authentication")
-      .defaultValue(AuthMode.KERBEROS)
+    val ASYNC_SECURITY_AUTHENTICATION: ConfigOption[String] = ConfigOptions.key("hbase.security.authentication")
+      .defaultValue("kerberos")
 
   val ASYNC_KERBEROS_REGIONSERVER_PRINCIPAL: ConfigOption[String] = ConfigOptions.key("hbase.kerberos.regionserver.principal")
     .noDefaultValue()
@@ -125,4 +115,15 @@ object HBase121Validator {
   val ASYNC_AUTH_LOGIN_CONFIG: ConfigOption[String] = ConfigOptions.key("java.security.auth.login.config")
     .noDefaultValue()
 
+
+  val SUPPORTED_KEYS = List(
+    CONNECTOR_HBASE_VERSION,
+    CONNECTOR_HBASE_BATCH_SIZE.key(),
+    ASYNC_SECURITY_AUTH_ENABLE.key(),
+    ASYNC_SECURITY_AUTHENTICATION.key(),
+    ASYNC_KERBEROS_REGIONSERVER_PRINCIPAL.key(),
+    ASYNC_RPC_PROTECTION.key(),
+    ASYNC_SASL_CLIENTCONFIG.key(),
+    ASYNC_AUTH_LOGIN_CONFIG.key()
+  )
 }
