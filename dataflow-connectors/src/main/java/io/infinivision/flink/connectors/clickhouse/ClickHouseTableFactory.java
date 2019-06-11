@@ -1,0 +1,118 @@
+package io.infinivision.flink.connectors.clickhouse;
+
+import io.infinivision.flink.connectors.utils.JDBCTableOptions;
+import org.apache.flink.api.java.io.jdbc.JDBCOptions;
+import org.apache.flink.table.api.RichTableSchema;
+import org.apache.flink.table.api.types.InternalType;
+import org.apache.flink.table.dataformat.BaseRow;
+import org.apache.flink.table.factories.BatchCompatibleTableSinkFactory;
+import org.apache.flink.table.factories.StreamTableSinkFactory;
+import org.apache.flink.table.sinks.BatchCompatibleStreamTableSink;
+import org.apache.flink.table.sinks.StreamTableSink;
+import org.apache.flink.table.sinks.TableSink;
+import org.apache.flink.table.util.TableProperties;
+import org.apache.flink.util.Preconditions;
+import scala.Option;
+
+import java.util.*;
+
+import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CONNECTOR_PROPERTY_VERSION;
+import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CONNECTOR_TYPE;
+
+public class ClickHouseTableFactory implements
+        StreamTableSinkFactory<BaseRow>,
+        BatchCompatibleTableSinkFactory<BaseRow> {
+
+    public static final String DRIVERNAME = "ru.yandex.clickhouse.ClickHouseDriver";
+
+    @Override
+    public BatchCompatibleStreamTableSink<BaseRow> createBatchCompatibleTableSink(Map<String, String> properties) {
+        return (BatchCompatibleStreamTableSink<BaseRow>) createJDBCStreamTableSink(properties);
+    }
+
+    @Override
+    public StreamTableSink<BaseRow> createStreamTableSink(Map<String, String> properties) {
+        return (StreamTableSink<BaseRow>) createJDBCStreamTableSink(properties);
+    }
+
+    private TableSink createJDBCStreamTableSink(Map<String, String> properties) {
+        TableProperties prop = new TableProperties();
+        prop.putProperties(properties);
+
+        //TODO Validator
+        ClickHouseValidator.validateTableOptions(properties);
+
+        RichTableSchema schema = prop.readSchemaFromProperties(
+                Thread.currentThread().getContextClassLoader()
+        );
+
+        String[] columnNames = schema.getColumnNames();
+        InternalType[] columnTypes = schema.getColumnTypes();
+        boolean[] nullables = schema.getNullables();
+
+        Preconditions.checkArgument(columnNames.length > 0 && columnTypes.length > 0 && nullables.length > 0,
+                "column numbers can not be 0!");
+
+        Preconditions.checkArgument(columnNames.length == columnTypes.length,
+                "columnNames length must be equal to columnTypes length!");
+
+        Preconditions.checkArgument(columnNames.length == nullables.length,
+                "columnNames length must be equal to nullable length!");
+
+        //ClickHouseTableSinkBuilder.
+        ClickHouseTableSinkBuilder builder = ClickHouseTableSinkBuilder.builder();
+        builder.driverName(DRIVERNAME)
+                .dbURL(prop.getString(JDBCOptions.DB_URL))
+                .driverVersion(prop.getString(JDBCTableOptions.VERSION))
+                .userName(prop.getString(JDBCOptions.USER_NAME))
+                .password(prop.getString(JDBCOptions.PASSWORD))
+                .tableName(prop.getString(JDBCOptions.TABLE_NAME))
+                .updateMode(prop.getString(JDBCTableOptions.UPDATE_MODE));
+
+        Set<String> primaryKeys = new HashSet<>();
+        Set<Set<String>> uniqueKeys = new HashSet<>();
+        if (!schema.getPrimaryKeys().isEmpty()) {
+            uniqueKeys.add(new HashSet<>(schema.getPrimaryKeys()));
+            primaryKeys = new HashSet<>(schema.getPrimaryKeys());
+        }
+        for (List<String> uniqueKey : schema.getUniqueKeys()) {
+            uniqueKeys.add(new HashSet<>(uniqueKey));
+        }
+        for (RichTableSchema.Index index : schema.getIndexes()) {
+            if (index.unique) {
+                uniqueKeys.add(new HashSet<>(index.keyList));
+            }
+        }
+
+        if (!primaryKeys.isEmpty()) {
+            builder.primaryKeys(Option.apply(primaryKeys));
+        }
+
+        if (!uniqueKeys.isEmpty()) {
+            builder.uniqueKeys(Option.apply(uniqueKeys));
+        }
+
+        builder.schema(Option.apply(schema));
+
+        builder.setParameterTypes(schema.getColumnTypes());
+
+        return builder.build()
+                .configure(schema.getColumnNames(), schema.getColumnTypes());
+    }
+
+    @Override
+    public Map<String, String> requiredContext() {
+        Map<String, String> context = new HashMap<>();
+        context.put(CONNECTOR_TYPE, "CLICKHOUSE");
+        context.put(CONNECTOR_PROPERTY_VERSION, "1");
+        return context;
+    }
+
+    @Override
+    public List<String> supportedProperties() {
+        List<String> properties = new ArrayList<>(JDBCOptions.SUPPORTED_KEYS);
+        properties.addAll(JDBCTableOptions.SUPPORTED_KEYS);
+        return properties;
+    }
+
+}
