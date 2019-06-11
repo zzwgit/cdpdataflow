@@ -94,8 +94,8 @@ object HBase121Validator {
   }
 
   // batch size for HBase PUT/DELETE/GET
-  val CONNECTOR_HBASE_BATCH_SIZE: ConfigOption[Int] = ConfigOptions.key("batchSize".toLowerCase)
-    .defaultValue(10000)
+  val CONNECTOR_HBASE_BATCH_SIZE: ConfigOption[String] = ConfigOptions.key("batchSize".toLowerCase)
+    .defaultValue("10000")
 
   // async Auth Login
   val ASYNC_SECURITY_AUTH_ENABLE: ConfigOption[String] = ConfigOptions.key("hbase.security.auth.enable")

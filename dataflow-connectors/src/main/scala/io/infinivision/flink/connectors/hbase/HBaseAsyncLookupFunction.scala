@@ -124,11 +124,8 @@ class HBaseAsyncLookupFunction(
 
   def parseResult(rowKey: AnyRef, cells: util.ArrayList[KeyValue]): GenericRow = {
     val reusedRow = new GenericRow(totalQualifiers+1)
-    LOG.info(s"Parse result rowkey: $rowKey")
     reusedRow.update(rowKeySourceIndex, rowKey)
     cells.asScala.foreach( cell => {
-      LOG.info(s"family: ${Bytes.pretty(cell.family())}")
-      LOG.info(s"qualifier: ${Bytes.pretty(cell.qualifier())}")
       val family = cell.family()
       val qualifier = cell.qualifier()
       val qInfo = qualifierList.asScala.filter { qf =>
@@ -149,7 +146,6 @@ class HBaseAsyncLookupFunction(
 
     })
 
-    LOG.info(s"ParseResult row: $reusedRow")
     reusedRow
   }
 

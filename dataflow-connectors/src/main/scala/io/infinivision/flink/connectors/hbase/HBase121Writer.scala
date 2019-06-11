@@ -24,7 +24,7 @@ class HBase121Writer(
   rowKeySourceIndex: Int,
   qualifierSourceIndexes: util.List[JInteger],
   hbaseConfiguration: Configuration,
-  batchSize: Option[Int])
+  batchSize: Int)
   extends HBaseWriterBase[JTuple2[JBool, Row]](
     hbaseTableName,
     hbaseSchema,
@@ -32,7 +32,7 @@ class HBase121Writer(
   with ListCheckpointed[util.ArrayList[Mutation]]
   with Logging{
 
-  val batchInterval: Int = if (batchSize.isDefined) batchSize.get else 5000
+  LOG.info(s"HBase121Writer batchSize: $batchSize")
   var batchCounter = 0
   val pendingPuts: util.List[Put] = new util.ArrayList[Put]()
   val pendingDeletes: util.List[Delete] = new util.ArrayList[Delete]()
@@ -110,7 +110,7 @@ class HBase121Writer(
         }
       }
 
-      if (batchCounter < batchInterval) {
+      if (batchCounter < batchSize) {
         pendingPuts.add(put)
         batchCounter += 1
       } else {
@@ -127,7 +127,7 @@ class HBase121Writer(
         }
       }
 
-      if (batchCounter < batchInterval) {
+      if (batchCounter < batchSize) {
         pendingDeletes.add(delete)
         batchCounter += 1
       } else {
@@ -137,14 +137,19 @@ class HBase121Writer(
   }
 
   def flush(): Unit = {
+    // flush pending puts
     table.put(pendingPuts)
     pendingPuts.clear()
+    // flush pending deletes
     table.delete(pendingDeletes)
     pendingDeletes.clear()
+
+    // reset batch counter
+    batchCounter=0
   }
 
   override def close(): Unit = {
-    LOG.debug("close HBase121Writer and flush pending PUT/DELETE operation")
+    LOG.info("close HBase121Writer and flush pending PUT/DELETE operation")
     flush()
     super.close()
   }

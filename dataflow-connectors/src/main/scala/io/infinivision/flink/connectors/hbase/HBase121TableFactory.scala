@@ -125,11 +125,13 @@ class HBase121TableFactory
     // construct the TableProperties
     val tableProperties = new TableProperties
     tableProperties.putProperties(properties)
+
+    LOG.info(s"CreateTableSink TableProperties: $tableProperties")
+
     val richSchema = tableProperties.readSchemaFromProperties(null)
 
     val hbaseSchemaInfo = extractHBaseSchemaAndIndexMapping(richSchema)
-    val batchSizeStr = properties.get(HBase121Validator.CONNECTOR_HBASE_BATCH_SIZE)
-    val batchSize = if (null != batchSizeStr) Some(batchSizeStr.toInt) else None
+    val batchSize = tableProperties.getString(HBase121Validator.CONNECTOR_HBASE_BATCH_SIZE).toInt
     new HBase121UpsertTableSink(
       richSchema,
       hTableName,

@@ -21,7 +21,7 @@ class HBase121UpsertTableSink(
   rowKeyIndex: JInteger,
   qualifierSourceIndexes: util.List[JInteger],
   hbaseConfiguration: Configuration,
-  batchSize: Option[Int])
+  batchSize: Int)
   extends TableSinkBase[JTuple2[JBool, Row]]
     with UpsertStreamTableSink[Row]
     with BatchCompatibleStreamTableSink[JTuple2[JBool, Row]]
