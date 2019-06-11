@@ -132,7 +132,20 @@ public class PostgresTableSource implements
 
     @Override
     public DataStream<BaseRow> getBoundedStream(StreamExecutionEnvironment streamEnv) {
-        return null;
+        //return getDataStream(streamEnv);
+        // build query template
+        StringBuilder fields = new StringBuilder();
+        for (int i = 0; i < columnNames.length; i++) {
+            if (i != 0) {
+                fields.append(", ");
+            }
+            fields.append(columnNames[i]);
+        }
+
+        String tableName = tableProperties.getString(JDBCOptions.TABLE_NAME);
+
+        String queryTemplate = String.format("SELECT %s FROM %s", fields, tableName);
+        return streamEnv.createInput(createInputFormat(queryTemplate), returnTypeInfo);
     }
 
     private String buildLookupQueryTemplate(int[] lookupKeys) {

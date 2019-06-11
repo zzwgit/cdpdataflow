@@ -15,6 +15,7 @@ import org.apache.flink.table.sinks.StreamTableSink;
 import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.sources.BatchTableSource;
 import org.apache.flink.table.sources.StreamTableSource;
+import org.apache.flink.table.sources.TableSource;
 import org.apache.flink.table.util.TableProperties;
 import org.apache.flink.util.Preconditions;
 import org.slf4j.Logger;
@@ -36,6 +37,42 @@ public class PostgresTableFactory implements
 
     @Override
     public StreamTableSource<BaseRow> createStreamTableSource(Map<String, String> properties) {
+        return createPostgresTableSource(properties);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public StreamTableSink<BaseRow> createStreamTableSink(Map<String, String> properties) {
+        return (StreamTableSink<BaseRow>) createJDBCStreamTableSink(properties);
+    }
+
+    @Override
+    public BatchTableSource<BaseRow> createBatchTableSource(Map<String, String> properties) {
+        return  createPostgresTableSource(properties);
+    }
+
+    @Override
+    public BatchTableSink<BaseRow> createBatchTableSink(Map<String, String> properties) {
+        throw new UnsupportedOperationException("Postgres table can not be convert to Batch Table Sink currently.");
+    }
+
+    @Override
+    public Map<String, String> requiredContext() {
+        Map<String, String> context = new HashMap<>();
+        context.put(CONNECTOR_TYPE, "POSTGRES");
+        context.put(CONNECTOR_PROPERTY_VERSION, "1");
+        return context;
+    }
+
+    @Override
+    public List<String> supportedProperties() {
+        List<String> properties = new ArrayList<>(JDBCOptions.SUPPORTED_KEYS);
+        properties.addAll(JDBCTableOptions.SUPPORTED_KEYS);
+        properties.addAll(PostgresTableOptions.SUPPORTED_KEYS);
+        return properties;
+    }
+
+    private PostgresTableSource createPostgresTableSource(Map<String, String> properties) {
         TableProperties prop = new TableProperties();
         prop.putProperties(properties);
 
@@ -91,7 +128,6 @@ public class PostgresTableFactory implements
         builder.setTableProperties(prop);
 
         return builder.build();
-
     }
 
     private TableSink createJDBCStreamTableSink(Map<String, String> properties) {
@@ -184,37 +220,4 @@ public class PostgresTableFactory implements
         return builder.build()
                 .configure(schema.getColumnNames(), schema.getColumnTypes());
     }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public StreamTableSink<BaseRow> createStreamTableSink(Map<String, String> properties) {
-        return (StreamTableSink<BaseRow>) createJDBCStreamTableSink(properties);
-    }
-
-    @Override
-    public BatchTableSource<BaseRow> createBatchTableSource(Map<String, String> properties) {
-        throw new UnsupportedOperationException("Postgres table can not be convert to Batch Table Source currently.");
-    }
-
-    @Override
-    public BatchTableSink<BaseRow> createBatchTableSink(Map<String, String> properties) {
-        throw new UnsupportedOperationException("Postgres table can not be convert to Batch Table Sink currently.");
-    }
-
-    @Override
-    public Map<String, String> requiredContext() {
-        Map<String, String> context = new HashMap<>();
-        context.put(CONNECTOR_TYPE, "POSTGRES");
-        context.put(CONNECTOR_PROPERTY_VERSION, "1");
-        return context;
-    }
-
-    @Override
-    public List<String> supportedProperties() {
-        List<String> properties = new ArrayList<>(JDBCOptions.SUPPORTED_KEYS);
-        properties.addAll(JDBCTableOptions.SUPPORTED_KEYS);
-        properties.addAll(PostgresTableOptions.SUPPORTED_KEYS);
-        return properties;
-    }
-
 }
