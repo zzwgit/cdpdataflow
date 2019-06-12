@@ -6,10 +6,8 @@ import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
-import org.apache.flink.table.factories.BatchTableSinkFactory;
-import org.apache.flink.table.factories.BatchTableSourceFactory;
-import org.apache.flink.table.factories.StreamTableSinkFactory;
-import org.apache.flink.table.factories.StreamTableSourceFactory;
+import org.apache.flink.table.factories.*;
+import org.apache.flink.table.sinks.BatchCompatibleStreamTableSink;
 import org.apache.flink.table.sinks.BatchTableSink;
 import org.apache.flink.table.sinks.StreamTableSink;
 import org.apache.flink.table.sinks.TableSink;
@@ -30,7 +28,7 @@ public class PostgresTableFactory implements
         StreamTableSourceFactory<BaseRow>,
         StreamTableSinkFactory<BaseRow>,
         BatchTableSourceFactory<BaseRow>,
-        BatchTableSinkFactory<BaseRow> {
+        BatchCompatibleTableSinkFactory<BaseRow> {
     private static final Logger LOG = LoggerFactory.getLogger(PostgresTableFactory.class);
 
     public static final String DRIVERNAME = "org.postgresql.Driver";
@@ -52,8 +50,8 @@ public class PostgresTableFactory implements
     }
 
     @Override
-    public BatchTableSink<BaseRow> createBatchTableSink(Map<String, String> properties) {
-        throw new UnsupportedOperationException("Postgres table can not be convert to Batch Table Sink currently.");
+    public BatchCompatibleStreamTableSink<BaseRow> createBatchCompatibleTableSink(Map<String, String> properties) {
+        return (BatchCompatibleStreamTableSink<BaseRow>) createJDBCStreamTableSink(properties);
     }
 
     @Override
@@ -220,4 +218,5 @@ public class PostgresTableFactory implements
         return builder.build()
                 .configure(schema.getColumnNames(), schema.getColumnTypes());
     }
+
 }
