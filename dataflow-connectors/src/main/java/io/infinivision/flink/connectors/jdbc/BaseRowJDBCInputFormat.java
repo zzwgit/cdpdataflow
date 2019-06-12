@@ -72,6 +72,8 @@ public class BaseRowJDBCInputFormat extends RichInputFormat<BaseRow, InputSplit>
             } else {
                 dbConn = DriverManager.getConnection(dbURL, username, password);
             }
+            //由于fetchSize不生效，需关闭autoCommit
+            dbConn.setAutoCommit(false);
             statement = dbConn.prepareStatement(queryTemplate, resultSetType, resultSetConcurrency);
             if (fetchSize == Integer.MIN_VALUE || fetchSize > 0) {
                 statement.setFetchSize(fetchSize);
@@ -250,7 +252,8 @@ public class BaseRowJDBCInputFormat extends RichInputFormat<BaseRow, InputSplit>
             this.format = new BaseRowJDBCInputFormat();
             //using TYPE_FORWARD_ONLY for high performance reads
             this.format.resultSetType = ResultSet.TYPE_FORWARD_ONLY;
-            this.format.resultSetConcurrency = ResultSet.CONCUR_READ_ONLY;
+            //this.format.resultSetConcurrency = ResultSet.CONCUR_READ_ONLY;
+            this.format.resultSetConcurrency = ResultSet.FETCH_FORWARD;
         }
 
         public Builder setUsername(String username) {

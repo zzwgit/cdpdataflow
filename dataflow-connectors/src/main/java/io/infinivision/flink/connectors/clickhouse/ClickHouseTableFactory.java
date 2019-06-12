@@ -6,8 +6,10 @@ import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.factories.BatchCompatibleTableSinkFactory;
+import org.apache.flink.table.factories.BatchTableSinkFactory;
 import org.apache.flink.table.factories.StreamTableSinkFactory;
 import org.apache.flink.table.sinks.BatchCompatibleStreamTableSink;
+import org.apache.flink.table.sinks.BatchTableSink;
 import org.apache.flink.table.sinks.StreamTableSink;
 import org.apache.flink.table.sinks.TableSink;
 import org.apache.flink.table.util.TableProperties;
@@ -19,11 +21,17 @@ import java.util.*;
 import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CONNECTOR_PROPERTY_VERSION;
 import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CONNECTOR_TYPE;
 
+//BatchTableSinkFactory<BaseRow>, BatchCompatibleTableSinkFactory<BaseRow>
 public class ClickHouseTableFactory implements
         StreamTableSinkFactory<BaseRow>,
         BatchCompatibleTableSinkFactory<BaseRow> {
 
     public static final String DRIVERNAME = "ru.yandex.clickhouse.ClickHouseDriver";
+
+//    @Override
+//    public BatchTableSink<BaseRow> createBatchTableSink(Map<String, String> properties) {
+//        return (BatchTableSink<BaseRow>) createJDBCStreamTableSink(properties);
+//    }
 
     @Override
     public BatchCompatibleStreamTableSink<BaseRow> createBatchCompatibleTableSink(Map<String, String> properties) {
@@ -39,7 +47,6 @@ public class ClickHouseTableFactory implements
         TableProperties prop = new TableProperties();
         prop.putProperties(properties);
 
-        //TODO Validator
         ClickHouseValidator.validateTableOptions(properties);
 
         RichTableSchema schema = prop.readSchemaFromProperties(

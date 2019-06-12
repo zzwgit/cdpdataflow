@@ -4,11 +4,12 @@ import java.lang.{Boolean => JBool}
 import java.util.{Set => JSet}
 
 import io.infinivision.flink.connectors.utils.JDBCTypeUtil
+import org.apache.flink.api.common.ExecutionConfig
 import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.streaming.api.datastream.{DataStream, DataStreamSink}
-import org.apache.flink.table.api.RichTableSchema
+import org.apache.flink.table.api.{RichTableSchema, TableConfig}
 import org.apache.flink.table.api.types.{DataType, DataTypes, InternalType}
-import org.apache.flink.table.sinks.{BatchCompatibleStreamTableSink, TableSinkBase, UpsertStreamTableSink}
+import org.apache.flink.table.sinks.{BatchCompatibleStreamTableSink, BatchTableSink, TableSinkBase, UpsertStreamTableSink}
 import org.apache.flink.table.util.{Logging, TableConnectorUtil}
 import org.apache.flink.types.Row
 
@@ -19,6 +20,7 @@ abstract class JDBCTableSink(
   extends TableSinkBase[JTuple2[JBool, Row]]
     with UpsertStreamTableSink[Row]
     with BatchCompatibleStreamTableSink[JTuple2[JBool, Row]]
+//    with BatchTableSink[JTuple2[JBool, Row]]
     with Logging {
 
   override def emitDataStream(dataStream: DataStream[JTuple2[JBool, Row]]): DataStreamSink[_] = {
@@ -31,6 +33,11 @@ abstract class JDBCTableSink(
       .name(TableConnectorUtil.generateRuntimeName(getClass, getFieldNames))
   }
 
+//  override def emitBoundedStream(boundedStream: DataStream[JTuple2[JBool, Row]], tableConfig: TableConfig, executionConfig: ExecutionConfig): DataStreamSink[_] = {
+//    boundedStream
+//      .addSink(new JDBCTableSinkFunction(outputFormat))
+//      .name(TableConnectorUtil.generateRuntimeName(this.getClass(), getFieldNames));
+//  }
 
   override def getRecordType: DataType = DataTypes.createRowType(getFieldTypes, getFieldNames)
 

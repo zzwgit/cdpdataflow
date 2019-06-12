@@ -63,6 +63,10 @@ public abstract class CommonTableOptions {
     public static final ConfigOption<String>  TIMEOUT = key("asynctimeout".toLowerCase())
             .defaultValue("10000");
 
+    // fetchSize of jdbc source
+    public static final ConfigOption<String>  FETCH_SIZE = key("fetchSize".toLowerCase())
+            .defaultValue("1000");
+
     public static final List<String> SUPPORTED_KEYS = Arrays.asList(
             VERSION.key(),
             CACHE.key(),
@@ -70,6 +74,7 @@ public abstract class CommonTableOptions {
             MODE.key(),
             UPDATE_MODE.key(),
             BUFFER_CAPACITY.key(),
-            TIMEOUT.key()
+            TIMEOUT.key(),
+            FETCH_SIZE.key()
     );
 }

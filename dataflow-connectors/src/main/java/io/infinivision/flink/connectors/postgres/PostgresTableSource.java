@@ -77,6 +77,7 @@ public class PostgresTableSource implements
         String userName = tableProperties.getString(JDBCOptions.USER_NAME);
         String password = tableProperties.getString(JDBCOptions.PASSWORD);
         String dbURL = tableProperties.getString(JDBCOptions.DB_URL);
+        Integer fetchSize = Integer.parseInt(tableProperties.getString(CommonTableOptions.FETCH_SIZE));
 
         return BaseRowJDBCInputFormat.buildBaseRowJDBCInputFormat()
                 .setUsername(userName)
@@ -85,6 +86,7 @@ public class PostgresTableSource implements
                 .setDBUrl(dbURL)
                 .setQuery(queryTemplate)
                 .setRowTypeInfo(returnTypeInfo)
+                .setFetchSize(fetchSize)
                 .finish();
     }
 
