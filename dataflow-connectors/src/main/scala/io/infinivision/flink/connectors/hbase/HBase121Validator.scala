@@ -2,7 +2,6 @@ package io.infinivision.flink.connectors.hbase
 
 import java.util
 
-import io.infinivision.flink.connectors.utils.CommonTableOptionsValidator
 import org.apache.flink.configuration.{ConfigOption, ConfigOptions}
 import org.apache.flink.connectors.hbase.table.HBaseValidator.CONNECTOR_HBASE_TABLE_NAME
 import org.apache.flink.table.descriptors.DescriptorProperties
@@ -75,7 +74,8 @@ class HBase121Validator extends Logging{
         properties.validateString(ASYNC_KERBEROS_REGIONSERVER_PRINCIPAL.key(), false, 1)
 
         properties.validateString(ASYNC_SASL_CLIENTCONFIG.key(), false, 1)
-        properties.validateString(ASYNC_AUTH_LOGIN_CONFIG.key(), false, 1)
+        properties.validateString(KEYTAB_PATH.key(), false, 1)
+        properties.validateString(PRINCIPAL.key(), false, 1)
       } else {
         throw new IllegalArgumentException("only simple/kerberos mode is supported for security authentication")
       }
@@ -112,9 +112,11 @@ object HBase121Validator {
   val ASYNC_SASL_CLIENTCONFIG: ConfigOption[String] = ConfigOptions.key("hbase.sasl.clientconfig")
     .defaultValue("HBaseClient")
 
-  val ASYNC_AUTH_LOGIN_CONFIG: ConfigOption[String] = ConfigOptions.key("java.security.auth.login.config")
+  val KEYTAB_PATH: ConfigOption[String] = ConfigOptions.key("keyTabPath".toLowerCase)
     .noDefaultValue()
 
+  val PRINCIPAL: ConfigOption[String] = ConfigOptions.key("Principal".toLowerCase)
+    .noDefaultValue()
 
   val SUPPORTED_KEYS = List(
     CONNECTOR_HBASE_VERSION,
@@ -124,6 +126,7 @@ object HBase121Validator {
     ASYNC_KERBEROS_REGIONSERVER_PRINCIPAL.key(),
     ASYNC_RPC_PROTECTION.key(),
     ASYNC_SASL_CLIENTCONFIG.key(),
-    ASYNC_AUTH_LOGIN_CONFIG.key()
+    KEYTAB_PATH.key(),
+    PRINCIPAL.key()
   )
 }

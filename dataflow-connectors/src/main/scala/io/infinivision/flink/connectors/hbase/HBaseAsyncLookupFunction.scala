@@ -2,6 +2,8 @@ package io.infinivision.flink.connectors.hbase
 
 import java.util
 import java.lang.{Integer => JInteger}
+import java.net.URI
+import java.nio.file.{Files, StandardCopyOption}
 import java.util.Collections
 
 import com.stumbleupon.async.Callback
@@ -9,6 +11,10 @@ import org.apache.flink.api.java.tuple.{Tuple3 => JTuple3}
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.connectors.hbase.table.HBaseTableSchemaV2
 import org.apache.flink.connectors.hbase.util.HBaseBytesSerializer
+import org.apache.flink.core
+import org.apache.flink.core.fs.local.LocalFileSystem
+import org.apache.flink.core.fs.{FileSystem, Path}
+import org.apache.flink.runtime.fs.hdfs.HadoopFileSystem
 import org.apache.flink.runtime.security.{DynamicConfiguration, KerberosUtils}
 import org.apache.flink.streaming.api.functions.async.ResultFuture
 import org.apache.flink.table.api.RichTableSchema
@@ -52,15 +58,30 @@ class HBaseAsyncLookupFunction(
 
   }
 
-  println(s"HBaseAsyncLookupFunction TableProperties: $tableProperties")
-
   def setupSecurityConfig(): Unit = {
     val priorConfig = javax.security.auth.login.Configuration.getConfiguration
     val currentConfig = new DynamicConfiguration(priorConfig)
-    val loginContextName = "HBaseClient"
-    val keyTab = "krb5.keytab"
-    val principal = "infinivision_flink_user"
-    currentConfig.addAppConfigurationEntry(loginContextName, KerberosUtils.keytabEntry(keyTab, principal))
+    val loginContextName = tableProperties.getString(HBase121Validator.ASYNC_SASL_CLIENTCONFIG)
+    var keyTabPath = tableProperties.getString(HBase121Validator.KEYTAB_PATH)
+    val principal = tableProperties.getString(HBase121Validator.PRINCIPAL)
+    // check the keytabPath
+    LOG.info(s"AsyncHBaseLookup keytab: $keyTabPath, principal: $principal")
+    val fs = FileSystem.get(URI.create(keyTabPath))
+    if (!fs.exists(new Path(keyTabPath))) {
+      throw new RuntimeException(s"AsyncHBaseLookup keyTabPath: $keyTabPath not exists")
+    }
+    if (fs.isDistributedFS) {
+      val inputStream = fs.open(new Path(keyTabPath))
+      val targetPath = Files.createTempFile("Flink-AsyncHBase-", ".keytab")
+      Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING)
+      val localPath = targetPath.toUri.getPath
+      LOG.info(s"HBaseAsyncLookupFunction KeyTab HDFS Remote $keyTabPath. LocalPath: $localPath")
+      keyTabPath = localPath
+      targetPath.toFile.deleteOnExit()
+      inputStream.close()
+    }
+
+    currentConfig.addAppConfigurationEntry(loginContextName, KerberosUtils.keytabEntry(keyTabPath, principal))
     javax.security.auth.login.Configuration.setConfiguration(currentConfig)
   }
 
@@ -68,13 +89,12 @@ class HBaseAsyncLookupFunction(
     LOG.info("start open HBaseAsyncLookupFunction...")
     super.open(context)
 
-    println(s"HBaseAsyncLookupFunction TableProperties: $tableProperties")
+    LOG.info(s"HBaseAsyncLookupFunction TableProperties: $tableProperties")
 
-    // set Property java.security.auth.login.config for kerberos login purpose
-//    System.setProperty(HBase121Validator.ASYNC_AUTH_LOGIN_CONFIG.key(),
-//      tableProperties.getString(HBase121Validator.ASYNC_AUTH_LOGIN_CONFIG))
-
-    setupSecurityConfig()
+    val isSecurityEnabled = tableProperties.getString(HBase121Validator.ASYNC_SECURITY_AUTH_ENABLE).toBoolean
+    if (isSecurityEnabled) {
+      setupSecurityConfig()
+    }
 
     val asyncConfig = new Config()
 
@@ -96,9 +116,6 @@ class HBaseAsyncLookupFunction(
     asyncConfig.overrideConfig(HBase121Validator.ASYNC_SASL_CLIENTCONFIG.key(),
       tableProperties.getString(HBase121Validator.ASYNC_SASL_CLIENTCONFIG))
 
-    asyncConfig.overrideConfig(HBase121Validator.ASYNC_AUTH_LOGIN_CONFIG.key(),
-      tableProperties.getString(HBase121Validator.ASYNC_AUTH_LOGIN_CONFIG))
-
     LOG.info("=====Dump HBase Async Configuration=====")
     LOG.info(asyncConfig.dumpConfiguration())
 
@@ -118,9 +135,6 @@ class HBaseAsyncLookupFunction(
 
   }
 
-//  override def getResultType(arguments: Array[AnyRef], argTypes: Array[Class[_]]): DataType = {
-//    tableSchema.getResultRowType
-//  }
 
   def parseResult(rowKey: AnyRef, cells: util.ArrayList[KeyValue]): GenericRow = {
     val reusedRow = new GenericRow(totalQualifiers+1)
