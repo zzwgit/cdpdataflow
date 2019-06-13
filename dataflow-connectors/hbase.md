@@ -30,8 +30,6 @@ CREATE TABLE tableName(
 | cache  | none/LRU/ALL(only for dimension table) |  false    |     none      |
 | cacheTTLms  | cache TTL(only for dimension table) |  false    |    3600000     |
 | mode  | async/sync(only for dimension table) |  false    |    async        |
-| mode  | async/sync(only for dimension table) |  false    |    async        |
-| mode  | async/sync(only for dimension table) |  false    |    async        |
 | hbase.security.auth.enable  | auth enable or not |  false    |    false        |
 | hbase.security.auth.authentication  | 认证方式 |  false    |    kerberos        |
 | keytabPath  | keytab 文件路径 |  false    |    none        |
@@ -133,8 +131,6 @@ create table hbase_adfeature (
     `mode`='async',
     `hbase.security.auth.enable`='true',
     `hbase.security.authentication`='kerberos',
-    `hbase.rpc.protection`='authentication',
-    `hbase.sasl.clientconfig`='HBaseClient',
     `keyTabPath`='hdfs:///user/infinivision_flink_user/infinivision_flink_user.keytab',
     `principal`='infinivision_flink_user'
 );
