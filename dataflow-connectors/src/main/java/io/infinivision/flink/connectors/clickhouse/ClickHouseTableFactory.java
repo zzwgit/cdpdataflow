@@ -1,17 +1,21 @@
 package io.infinivision.flink.connectors.clickhouse;
 
+import io.infinivision.flink.connectors.postgres.PostgresTableSource;
+import io.infinivision.flink.connectors.postgres.PostgresValidator;
 import io.infinivision.flink.connectors.utils.JDBCTableOptions;
 import org.apache.flink.api.java.io.jdbc.JDBCOptions;
 import org.apache.flink.table.api.RichTableSchema;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.factories.BatchCompatibleTableSinkFactory;
-import org.apache.flink.table.factories.BatchTableSinkFactory;
+import org.apache.flink.table.factories.BatchTableSourceFactory;
 import org.apache.flink.table.factories.StreamTableSinkFactory;
+import org.apache.flink.table.factories.StreamTableSourceFactory;
 import org.apache.flink.table.sinks.BatchCompatibleStreamTableSink;
-import org.apache.flink.table.sinks.BatchTableSink;
 import org.apache.flink.table.sinks.StreamTableSink;
 import org.apache.flink.table.sinks.TableSink;
+import org.apache.flink.table.sources.BatchTableSource;
+import org.apache.flink.table.sources.StreamTableSource;
 import org.apache.flink.table.util.TableProperties;
 import org.apache.flink.util.Preconditions;
 import scala.Option;
@@ -24,9 +28,21 @@ import static org.apache.flink.table.descriptors.ConnectorDescriptorValidator.CO
 //BatchTableSinkFactory<BaseRow>, BatchCompatibleTableSinkFactory<BaseRow>
 public class ClickHouseTableFactory implements
         StreamTableSinkFactory<BaseRow>,
-        BatchCompatibleTableSinkFactory<BaseRow> {
+        BatchCompatibleTableSinkFactory<BaseRow>,
+        StreamTableSourceFactory<BaseRow>,
+        BatchTableSourceFactory<BaseRow> {
 
     public static final String DRIVERNAME = "ru.yandex.clickhouse.ClickHouseDriver";
+
+    @Override
+    public BatchTableSource<BaseRow> createBatchTableSource(Map<String, String> properties) {
+        return createSource(properties);
+    }
+
+    @Override
+    public StreamTableSource<BaseRow> createStreamTableSource(Map<String, String> properties) {
+        return createSource(properties);
+    }
 
 //    @Override
 //    public BatchTableSink<BaseRow> createBatchTableSink(Map<String, String> properties) {
@@ -41,6 +57,64 @@ public class ClickHouseTableFactory implements
     @Override
     public StreamTableSink<BaseRow> createStreamTableSink(Map<String, String> properties) {
         return (StreamTableSink<BaseRow>) createJDBCStreamTableSink(properties);
+    }
+
+    private ClickHouseTableSource createSource(Map<String, String> properties) {
+        TableProperties prop = new TableProperties();
+        prop.putProperties(properties);
+
+        ClickHouseValidator.validateTableOptions(properties);
+
+        RichTableSchema schema = prop.readSchemaFromProperties(
+                Thread.currentThread().getContextClassLoader()
+        );
+        String[] columnNames = schema.getColumnNames();
+        InternalType[] columnTypes = schema.getColumnTypes();
+        boolean[] nullables = schema.getNullables();
+
+        Preconditions.checkArgument(columnNames.length > 0 && columnTypes.length > 0 && nullables.length > 0,
+                "column numbers can not be 0");
+
+        Preconditions.checkArgument(columnNames.length == columnTypes.length,
+                "columnNames length must be equal to columnTypes length");
+
+        Preconditions.checkArgument(columnNames.length == nullables.length,
+                "columnNames length must be equal to nullable length");
+
+
+        ClickHouseTableSourceBuilder builder = ClickHouseTableSourceBuilder.builder()
+                .fields(columnNames, columnTypes, nullables);
+
+        Set<String> primaryKeys = new HashSet<>();
+        Set<Set<String>> uniqueKeys = new HashSet<>();
+        Set<Set<String>> normalIndexes = new HashSet<>();
+        if (!schema.getPrimaryKeys().isEmpty()) {
+            uniqueKeys.add(new HashSet<>(schema.getPrimaryKeys()));
+            primaryKeys = new HashSet<>(schema.getPrimaryKeys());
+        }
+        for (List<String> uniqueKey : schema.getUniqueKeys()) {
+            uniqueKeys.add(new HashSet<>(uniqueKey));
+        }
+        for (RichTableSchema.Index index : schema.getIndexes()) {
+            if (index.unique) {
+                uniqueKeys.add(new HashSet<>(index.keyList));
+            } else {
+                normalIndexes.add(new HashSet<>(index.keyList));
+            }
+        }
+        if (!primaryKeys.isEmpty()) {
+            builder.setPrimaryKeys(primaryKeys);
+        }
+        if (!uniqueKeys.isEmpty()) {
+            builder.setUniqueKeys(uniqueKeys);
+        }
+        if (!normalIndexes.isEmpty()) {
+            builder.setNormalIndexes(normalIndexes);
+        }
+
+        builder.setTableProperties(prop);
+
+        return builder.build();
     }
 
     private TableSink createJDBCStreamTableSink(Map<String, String> properties) {
