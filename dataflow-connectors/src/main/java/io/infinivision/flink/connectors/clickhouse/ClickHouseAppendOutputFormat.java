@@ -36,7 +36,7 @@ public class ClickHouseAppendOutputFormat extends JDBCBaseOutputFormat {
     @Override
     public String prepareSql() {
 
-        String namePlaceholder = Arrays.stream(fieldNames).collect(Collectors.joining(","));
+        String namePlaceholder = Arrays.stream(fieldNames).map(key -> "`"+key+"`").collect(Collectors.joining(","));
         String valuePlaceholder = Arrays.stream(fieldNames).map(key -> "?").collect(Collectors.joining(","));
 
         Map<String, String> replaceValue = Maps.newHashMap();

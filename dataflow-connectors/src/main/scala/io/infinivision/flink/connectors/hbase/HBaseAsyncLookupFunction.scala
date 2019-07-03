@@ -19,7 +19,7 @@ import org.apache.flink.runtime.security.{DynamicConfiguration, KerberosUtils}
 import org.apache.flink.streaming.api.functions.async.ResultFuture
 import org.apache.flink.table.api.RichTableSchema
 import org.apache.flink.table.api.functions.{AsyncTableFunction, FunctionContext}
-import org.apache.flink.table.dataformat.{BaseRow, GenericRow}
+import org.apache.flink.table.dataformat.{BaseRow, BinaryString, GenericRow}
 import org.apache.flink.table.util.{Logging, TableProperties}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.HConstants
@@ -164,7 +164,13 @@ class HBaseAsyncLookupFunction(
   }
 
   def eval(resultFuture: ResultFuture[BaseRow], rowKey: Object): Unit = {
-    val rk = inputFieldSerializers.get(rowKeySourceIndex).toHBaseBytes(rowKey)
+
+    val rowKey2 = rowKey match {
+      case _:BinaryString => rowKey.asInstanceOf[BinaryString].toString
+      case _ => rowKey
+    }
+
+    val rk = inputFieldSerializers.get(rowKeySourceIndex).toHBaseBytes(rowKey2)
     val getRequest: GetRequest = new GetRequest(hbaseTableName, rk)
     val defered = hClient.get(getRequest)
 

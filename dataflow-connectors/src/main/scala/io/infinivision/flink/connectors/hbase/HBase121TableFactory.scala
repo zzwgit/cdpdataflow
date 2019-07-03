@@ -3,7 +3,7 @@ package io.infinivision.flink.connectors.hbase
 import java.util
 
 import org.apache.flink.api.java.tuple.{Tuple3 => JTuple3}
-import org.apache.flink.table.sinks.{BatchTableSink, StreamTableSink, TableSink}
+import org.apache.flink.table.sinks.{BatchCompatibleStreamTableSink, BatchTableSink, StreamTableSink, TableSink}
 import org.apache.flink.table.sources.{BatchTableSource, StreamTableSource, TableSource}
 import org.apache.flink.types.Row
 import java.lang.{Integer => JInteger}
@@ -14,7 +14,7 @@ import org.apache.flink.connectors.hbase.table.HBaseValidator.{COLUMNFAMILY_QUAL
 import org.apache.flink.table.api.RichTableSchema
 import org.apache.flink.table.api.types.{DataType, TypeConverters}
 import org.apache.flink.table.descriptors.ConnectorDescriptorValidator.{CONNECTOR_PROPERTY_VERSION, CONNECTOR_TYPE}
-import org.apache.flink.table.factories.{BatchTableSinkFactory, BatchTableSourceFactory, StreamTableSinkFactory, StreamTableSourceFactory}
+import org.apache.flink.table.factories._
 import org.apache.flink.table.util.{Logging, TableProperties}
 import org.apache.flink.util.StringUtils
 import org.apache.hadoop.conf.Configuration
@@ -29,7 +29,7 @@ class HBase121TableFactory
   extends StreamTableSourceFactory[Row]
     with StreamTableSinkFactory[Row]
     with BatchTableSourceFactory[Row]
-    with BatchTableSinkFactory[Row]
+    with BatchCompatibleTableSinkFactory[Row]
     with Logging {
 
   val HBASE_VERSION = "1.2.1"
@@ -179,9 +179,13 @@ class HBase121TableFactory
     validator.validateTableOptions(properties)
   }
 
-  override def createBatchTableSink(properties: util.Map[String, String]): BatchTableSink[Row] = {
-    createTableSink(properties).asInstanceOf[BatchTableSink[Row]]
-  }
+//  override def createBatchTableSink(properties: util.Map[String, String]): BatchTableSink[Row] = {
+//    createTableSink(properties).asInstanceOf[BatchTableSink[Row]]
+//  }
+  override def createBatchCompatibleTableSink(properties: util.Map[String, String]): BatchCompatibleStreamTableSink[Row] = {
+     createTableSink(properties).asInstanceOf[BatchCompatibleStreamTableSink[Row]]
+   }
+
 
   override def createBatchTableSource(properties: util.Map[String, String]): BatchTableSource[Row] = {
     createTableSource(properties).asInstanceOf[BatchTableSource[Row]]
