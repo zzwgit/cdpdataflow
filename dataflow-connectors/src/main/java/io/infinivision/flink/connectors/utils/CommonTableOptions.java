@@ -51,6 +51,10 @@ public abstract class CommonTableOptions {
     public static final ConfigOption<String>  CACHE_TTL = key("cacheTTLms".toLowerCase())
             .defaultValue("3600000");
 
+    // cache size for LRU
+    public static final ConfigOption<String> CACHE_SIZE = key("cacheSize".toLowerCase())
+            .defaultValue("10000");
+
     // join mode. sync / async
     public static final ConfigOption<String>  MODE = key("mode".toLowerCase())
             .defaultValue("async");
@@ -75,6 +79,7 @@ public abstract class CommonTableOptions {
             VERSION.key(),
             CACHE.key(),
             CACHE_TTL.key(),
+            CACHE_SIZE.key(),
             MODE.key(),
             UPDATE_MODE.key(),
             BUFFER_CAPACITY.key(),
