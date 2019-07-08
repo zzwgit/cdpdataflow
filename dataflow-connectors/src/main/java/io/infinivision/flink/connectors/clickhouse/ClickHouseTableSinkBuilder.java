@@ -21,7 +21,8 @@ public class ClickHouseTableSinkBuilder extends JDBCTableSinkBuilder {
                 this.dbURL(),
                 this.tableName(),
                 this.schema().get().getColumnNames(),
-                this.parameterTypes()
+                this.parameterTypes(),
+                this.batchSize()
         );
 
         return new ClickHouseTableSink(outputFormat);

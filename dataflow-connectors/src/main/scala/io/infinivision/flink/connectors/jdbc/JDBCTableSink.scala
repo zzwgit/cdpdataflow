@@ -57,6 +57,13 @@ abstract class JDBCTableSinkBuilder {
   protected var schema: Option[RichTableSchema] = None
   protected var updateMode: String = _
   protected var parameterTypes: Array[Int] = _
+  protected var batchSize: Int = _
+
+  //batchSize为中间变量，最终传递给JDBCBaseOutputFormat的batchInterval
+  def batchSize(batchSize: Int): JDBCTableSinkBuilder = {
+    this.batchSize = batchSize
+    this
+  }
 
   def userName(userName: String): JDBCTableSinkBuilder = {
     this.userName = userName

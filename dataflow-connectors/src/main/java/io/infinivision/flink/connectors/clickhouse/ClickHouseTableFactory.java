@@ -1,7 +1,6 @@
 package io.infinivision.flink.connectors.clickhouse;
 
-import io.infinivision.flink.connectors.postgres.PostgresTableSource;
-import io.infinivision.flink.connectors.postgres.PostgresValidator;
+import io.infinivision.flink.connectors.utils.CommonTableOptions;
 import io.infinivision.flink.connectors.utils.JDBCTableOptions;
 import org.apache.flink.api.java.io.jdbc.JDBCOptions;
 import org.apache.flink.table.api.RichTableSchema;
@@ -145,6 +144,7 @@ public class ClickHouseTableFactory implements
         builder.driverName(DRIVERNAME)
                 .dbURL(prop.getString(JDBCOptions.DB_URL))
                 .driverVersion(prop.getString(JDBCTableOptions.VERSION))
+                .batchSize(Integer.parseInt(prop.getString(CommonTableOptions.BATCH_SIZE)))
                 .userName(prop.getString(JDBCOptions.USER_NAME))
                 .password(prop.getString(JDBCOptions.PASSWORD))
                 .tableName(prop.getString(JDBCOptions.TABLE_NAME))

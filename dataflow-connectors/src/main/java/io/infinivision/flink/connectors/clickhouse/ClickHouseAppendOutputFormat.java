@@ -20,8 +20,9 @@ public class ClickHouseAppendOutputFormat extends JDBCBaseOutputFormat {
     private String tableName;
     private String[] fieldNames;
     private int[] fieldSQLTypes;
+    private int batchSize;
 
-    public ClickHouseAppendOutputFormat(String userName, String password, String driverName, String driverVersion, String dbURL, String tableName, String[] fieldNames, int[] fieldSQLTypes) {
+    public ClickHouseAppendOutputFormat(String userName, String password, String driverName, String driverVersion, String dbURL, String tableName, String[] fieldNames, int[] fieldSQLTypes, int batchSize) {
         super(userName, password, driverName, driverVersion, dbURL, tableName, fieldNames, fieldSQLTypes);
         this.userName = userName;
         this.password = password;
@@ -31,12 +32,14 @@ public class ClickHouseAppendOutputFormat extends JDBCBaseOutputFormat {
         this.tableName = tableName;
         this.fieldNames = fieldNames;
         this.fieldSQLTypes = fieldSQLTypes;
+        this.batchSize = batchSize;
+        this.batchInterval(batchSize);
     }
 
     @Override
     public String prepareSql() {
 
-        String namePlaceholder = Arrays.stream(fieldNames).map(key -> "`"+key+"`").collect(Collectors.joining(","));
+        String namePlaceholder = Arrays.stream(fieldNames).map(key -> "`" + key + "`").collect(Collectors.joining(","));
         String valuePlaceholder = Arrays.stream(fieldNames).map(key -> "?").collect(Collectors.joining(","));
 
         Map<String, String> replaceValue = Maps.newHashMap();
@@ -100,6 +103,8 @@ public class ClickHouseAppendOutputFormat extends JDBCBaseOutputFormat {
                                 statement().setFloat(index + 1, (float) row.getField(index));
                                 break;
                             case java.sql.Types.FLOAT:
+                                statement().setFloat(index + 1, (float) row.getField(index));
+                                break;
                             case java.sql.Types.DOUBLE:
                                 statement().setDouble(index + 1, (double) row.getField(index));
                                 break;

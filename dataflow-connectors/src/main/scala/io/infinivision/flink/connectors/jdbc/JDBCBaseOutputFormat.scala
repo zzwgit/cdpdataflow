@@ -31,6 +31,10 @@ abstract class JDBCBaseOutputFormat(
 
   }
 
+  def batchInterval(batchInterval: Int): Unit = {
+    this.batchInterval = batchInterval
+  }
+
   private def establishConnection(): Unit = {
     Class.forName(driverName)
     if (userName == null) dbConn = DriverManager.getConnection(dbURL)

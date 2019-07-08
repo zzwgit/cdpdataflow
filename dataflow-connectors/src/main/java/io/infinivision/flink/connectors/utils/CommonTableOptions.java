@@ -67,6 +67,10 @@ public abstract class CommonTableOptions {
     public static final ConfigOption<String>  FETCH_SIZE = key("fetchSize".toLowerCase())
             .defaultValue("1000");
 
+    // batch size for sink
+    public static final ConfigOption<String> BATCH_SIZE = key("batchSize".toLowerCase())
+            .defaultValue("5000");
+
     public static final List<String> SUPPORTED_KEYS = Arrays.asList(
             VERSION.key(),
             CACHE.key(),
@@ -75,6 +79,7 @@ public abstract class CommonTableOptions {
             UPDATE_MODE.key(),
             BUFFER_CAPACITY.key(),
             TIMEOUT.key(),
-            FETCH_SIZE.key()
+            FETCH_SIZE.key(),
+            BATCH_SIZE.key()
     );
 }
