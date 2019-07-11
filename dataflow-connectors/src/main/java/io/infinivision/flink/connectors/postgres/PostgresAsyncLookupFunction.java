@@ -27,8 +27,9 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
-public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> implements CacheableFunction<List<Object>, List<BaseRow>> {
+public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> implements CacheableFunction<List<Object>, Optional<List<BaseRow>>> {
     private static final Logger LOG = LoggerFactory.getLogger(PostgresAsyncLookupFunction.class);
 
     private final TableProperties tableProperties;
@@ -37,7 +38,7 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> imp
     private Vertx vertx;
     private transient SQLClient SQLClient;
     private final CacheConfig cacheConfig;
-    private transient CacheBackend<List<Object>, List<BaseRow>> cache;
+    private transient CacheBackend<List<Object>, Optional<List<BaseRow>>> cache;
 
     private final static int DEFAULT_VERTX_EVENT_LOOP_POOL_SIZE = 1;
 
@@ -96,10 +97,13 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> imp
         }
         List<Object> cacheKey = inputParams.getList();
 
-        if (this.cache != null && this.cache.exist(cacheKey)) {
-            resultFuture.complete(this.cache.get(cacheKey));
-            // cache hit
-            return;
+        if (this.cache != null) {
+            Optional<List<BaseRow>> value = this.cache.get(cacheKey);
+            if (value.isPresent()) {
+                resultFuture.complete(value.get());
+                // cache hit, simply return
+                return;
+            }
         }
 
         SQLClient.getConnection(conn -> {
@@ -132,7 +136,7 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> imp
                     results = Collections.emptyList();
                 }
                 if (this.cache != null) {
-                    this.cache.put(cacheKey, results);
+                    this.cache.put(cacheKey, Optional.of(results));
                 }
                 resultFuture.complete(results);
                 connection.close(done -> {
@@ -186,7 +190,7 @@ public class PostgresAsyncLookupFunction extends AsyncTableFunction<BaseRow> imp
     }
 
     @Override
-    public List<BaseRow> loadValue(List<Object> key) {
-        return null;
+    public Optional<List<BaseRow>> loadValue(List<Object> key) {
+        return Optional.empty();
     }
 }

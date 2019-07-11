@@ -38,14 +38,14 @@ class HBaseAsyncLookupFunction(
                                 hbaseConfiguration: Configuration,
                                 cacheConfig: CacheConfig)
   extends AsyncTableFunction[BaseRow]
-    with CacheableFunction[util.List[Byte], util.List[BaseRow]]
+    with CacheableFunction[util.List[Byte], Option[util.List[BaseRow]]]
     with Logging {
 
   private val qualifierList: util.List[JTuple3[Array[Byte], Array[Byte], TypeInformation[_]]] = hbaseSchema.getFamilySchema.getFlatByteQualifiers
   private val charset: String = hbaseSchema.getFamilySchema.getStringCharset
   private val inputFieldSerializers: util.List[HBaseBytesSerializer] = new util.ArrayList[HBaseBytesSerializer]()
   private val totalQualifiers: Int = hbaseSchema.getFamilySchema.getTotalQualifiers
-  private var cache: CacheBackend[util.List[Byte], util.List[BaseRow]] = _
+  private var cache: CacheBackend[util.List[Byte], Option[util.List[BaseRow]]] = _
 
 
   //  private val serializedConfig: Array[Byte] = HBaseConfigurationUtil.serializeConfiguration(hbaseConfiguration)
@@ -192,18 +192,19 @@ class HBaseAsyncLookupFunction(
     // attention!! Array do not have equals method, it just inherits Object.equals
     // so need convert to List
     val cacheKey = util.Arrays.asList(rk: _*)
-    if (this.cache != null && this.cache.exist(cacheKey)) {
+    if (this.cache != null) {
       val rows = this.cache.get(cacheKey)
       // when cache type is all, rowkey is bytearray
       if (cacheConfig.isAll) {
-        rows.asScala.foreach(e => e.asInstanceOf[GenericRow].update(rowKeySourceIndex, rowKey))
+        val r = rows.getOrElse(Collections.emptyList())
+        r.asScala.foreach(e => e.asInstanceOf[GenericRow].update(rowKeySourceIndex, rowKey))
+        resultFuture.complete(r)
+        return
+      } else if (rows.nonEmpty) {
+        resultFuture.complete(rows.get)
+        return
       }
-      resultFuture.complete(rows)
-      return
-    } else if (this.cacheConfig.isAll) {
-      // cache type is all, no need to search hbase again,just return empty
-      resultFuture.complete(Collections.emptyList())
-      return
+
     }
     val getRequest: GetRequest = new GetRequest(hbaseTableName, rk)
     val defered = hClient.get(getRequest)
@@ -218,7 +219,7 @@ class HBaseAsyncLookupFunction(
             Collections.singletonList(row)
           }
         if (cache != null) {
-          cache.put(cacheKey, result)
+          cache.put(cacheKey, Option(result))
         }
         resultFuture.complete(result)
       }
@@ -235,7 +236,7 @@ class HBaseAsyncLookupFunction(
         while (iter.hasNext) {
           val row = iter.next()
           val rk = row.get(0).key()
-          cache.put(util.Arrays.asList(rk: _*), Collections.singletonList(parseResult(rk, row)))
+          cache.put(util.Arrays.asList(rk: _*), Option(Collections.singletonList(parseResult(rk, row))))
         }
         future.complete(1)
       }
@@ -257,5 +258,5 @@ class HBaseAsyncLookupFunction(
     * @param key
     * @return
     */
-  override def loadValue(key: util.List[Byte]): util.List[BaseRow] = ???
+  override def loadValue(key: util.List[Byte]): Option[util.List[BaseRow]] = Option.empty
 }
