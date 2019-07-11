@@ -118,7 +118,9 @@ public class ClickHouseTableSource implements
             builder.column(columnNames[index], columnTypes[index], columnNullables[index]);
         }
 
-        builder.primaryKey(primaryKeys);
+        if(primaryKeys.length > 0) {
+            builder.primaryKey(primaryKeys);
+        }
 
         for (String[] uk : uniqueKeys) {
             builder.uniqueIndex(uk);
