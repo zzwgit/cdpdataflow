@@ -11,6 +11,7 @@ import com.stumbleupon.async.Callback
 import io.infinivision.flink.connectors.CacheableFunction
 import io.infinivision.flink.connectors.cache.CacheBackend
 import io.infinivision.flink.connectors.utils.CacheConfig
+import org.apache.commons.collections.CollectionUtils
 import org.apache.flink.api.common.typeinfo.TypeInformation
 import org.apache.flink.api.java.tuple.{Tuple3 => JTuple3}
 import org.apache.flink.connectors.hbase.table.HBaseTableSchemaV2
@@ -196,7 +197,9 @@ class HBaseAsyncLookupFunction(
       val rows = this.cache.get(cacheKey)
       // when cache type is all, rowkey is bytearray
       if (cacheConfig.isAll) {
-        val r = rows.getOrElse(Collections.emptyList())
+        // when cache type is all, cacheKey may be not exist in cache
+        // so rows == null
+        val r = Option(rows).getOrElse(Option.empty).getOrElse(Collections.emptyList())
         r.asScala.foreach(e => e.asInstanceOf[GenericRow].update(rowKeySourceIndex, rowKey))
         resultFuture.complete(r)
         return
@@ -227,22 +230,20 @@ class HBaseAsyncLookupFunction(
   }
 
   private def loadData() = {
+    LOG.info("start loading data from hbase table={}", hbaseTableName)
     val scanner = hClient.newScanner(hbaseTableName)
-    val defered = scanner.nextRows()
-    val future = new CompletableFuture[Int]()
-    defered.addCallback[Unit](new Callback[Unit, util.ArrayList[util.ArrayList[KeyValue]]] {
-      override def call(rows: util.ArrayList[util.ArrayList[KeyValue]]): Unit = {
-        val iter = rows.iterator()
-        while (iter.hasNext) {
-          val row = iter.next()
-          val rk = row.get(0).key()
-          cache.put(util.Arrays.asList(rk: _*), Option(Collections.singletonList(parseResult(rk, row))))
-        }
-        future.complete(1)
+    var counter = 0
+    var rows = scanner.nextRows().joinUninterruptibly()
+    // make asynchronous as synchronous
+    while (CollectionUtils.isNotEmpty(rows)) {
+      counter += rows.size()
+      rows.asScala.foreach { row =>
+        val rk = row.get(0).key()
+        cache.put(util.Arrays.asList(rk: _*), Option(Collections.singletonList(parseResult(rk, row))))
       }
-    })
-    // wait until scan finished
-    future.get()
+      rows = scanner.nextRows().joinUninterruptibly()
+    }
+    LOG.info("end loading data from hbase... total count={}", counter)
   }
 
   /**

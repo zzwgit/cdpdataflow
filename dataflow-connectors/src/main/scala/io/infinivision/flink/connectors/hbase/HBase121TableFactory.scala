@@ -151,8 +151,8 @@ class HBase121TableFactory
     val hTableName = properties.get(CONNECTOR_HBASE_TABLE_NAME)
     val conf = HBaseConfiguration.create()
     properties.put(HConstants.ZOOKEEPER_QUORUM, conf.get(HConstants.ZOOKEEPER_QUORUM))
-    properties.put(HBase121Validator.ASYNC_KERBEROS_REGIONSERVER_PRINCIPAL.key(),
-      conf.get(HBase121Validator.HBASE_REGIONSERVER_KERBEROS_PRINCIPAL))
+    Option(conf.get(HBase121Validator.HBASE_REGIONSERVER_KERBEROS_PRINCIPAL))
+      .foreach(e => properties.put(HBase121Validator.ASYNC_KERBEROS_REGIONSERVER_PRINCIPAL.key(), e))
 
     // construct the TableProperties
     val tableProperties = new TableProperties
@@ -179,12 +179,12 @@ class HBase121TableFactory
     validator.validateTableOptions(properties)
   }
 
-//  override def createBatchTableSink(properties: util.Map[String, String]): BatchTableSink[Row] = {
-//    createTableSink(properties).asInstanceOf[BatchTableSink[Row]]
-//  }
+  //  override def createBatchTableSink(properties: util.Map[String, String]): BatchTableSink[Row] = {
+  //    createTableSink(properties).asInstanceOf[BatchTableSink[Row]]
+  //  }
   override def createBatchCompatibleTableSink(properties: util.Map[String, String]): BatchCompatibleStreamTableSink[Row] = {
-     createTableSink(properties).asInstanceOf[BatchCompatibleStreamTableSink[Row]]
-   }
+    createTableSink(properties).asInstanceOf[BatchCompatibleStreamTableSink[Row]]
+  }
 
 
   override def createBatchTableSource(properties: util.Map[String, String]): BatchTableSource[Row] = {
