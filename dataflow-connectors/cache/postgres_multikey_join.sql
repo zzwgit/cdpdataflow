@@ -12,7 +12,7 @@ CREATE TABLE PARTSUPP ( PS_PARTKEY     int NOT NULL,
 	 mode='async'|'sync',
 	 cache='LRU'|'ALL',
  	cacheTTLms='10000000',
- 	cacheSize='10000',
+ 	cacheSize='10000', -- ALL模式下不需要
 	 tablename = 'partsupp',
 	 dburl = 'jdbc:postgresql://172.19.0.108:5432/db_dmx_stage'
 );

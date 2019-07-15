@@ -1,5 +1,5 @@
 ### 使用tpc-h 数据 测试
-1. [官网](http://www.tpc.org/information/benchmarks.asp?)下载数据tpc-h-tools.zip
+1. [官网](http://www.tpc.org/information/benchmarks.asp?)下载数据tpc-h-tools.zip(当前目录下已经下载好)
 
 2. 解压
 

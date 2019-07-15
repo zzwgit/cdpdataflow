@@ -25,7 +25,7 @@ create table hbase121_dimension (
     `version`='1.2.1',
 	 mode='async',
          cache='LRU'|'ALL',
-        cacheTTLms='10000',
+        cacheTTLms='10000',-- ALL模式下不需要
         cacheSize='60000'
 );
 create table scv_sink (

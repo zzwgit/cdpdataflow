@@ -17,7 +17,7 @@ CREATE TABLE CUSTOMER
 	 mode='async'|'sync',         ----
 	 cache='LRU'|'ALL',          ----
  	cacheTTLms='10000',    ----
- 	cacheSize='60000',     ----
+ 	cacheSize='60000',     ------ ALL模式下不需要
 	 tablename = 'customer',
 	 dburl = 'jdbc:postgresql://172.19.0.108:5432/db_dmx_stage'
 );
