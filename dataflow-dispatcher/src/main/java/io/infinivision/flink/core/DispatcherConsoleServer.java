@@ -13,7 +13,12 @@ import io.infinivision.flink.parser.OptionsParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import org.apache.flink.table.client.cli.CliOptionsParser;
 import org.apache.flink.table.client.config.Environment;
 import org.apache.flink.table.client.gateway.SessionContext;
@@ -22,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -30,6 +36,7 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.regex.Pattern;
 
 public class DispatcherConsoleServer {
@@ -100,9 +107,17 @@ public class DispatcherConsoleServer {
         List<URL> libDirs = OptionsParser.checkUrls(commandLine, CliOptionsParser.OPTION_LIBRARY);
         //sqlpath
         String sqlPath = commandLine.getOptionValue(OptionsParser.OPTION_SQLPATH.getOpt());
-
+        String sqlFileName = sqlPath.substring(sqlPath.lastIndexOf('/') + 1);
         // create SessionContext by user define (environment)
-        Environment sessionEnv = null == environment ? new Environment() : Environment.parse(environment);
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        JsonNode enTree = mapper.readTree(environment);
+        JsonNode deploymentNode = enTree.get("deployment");
+        // 尊重用户的选择
+        if (deploymentNode.get("ynm") == null) {
+            ((ObjectNode) deploymentNode).put("ynm", sqlFileName);
+        }
+        Environment sessionEnv = null == environment ? new Environment() :
+                Environment.parse(mapper.writeValueAsString(enTree));
         Map<String, String> deploymentMap = sessionEnv.getDeployment().asMap();
 
         //set checkpoint by read from environment
@@ -128,11 +143,18 @@ public class DispatcherConsoleServer {
 
         // Executor
 //        LocalExecutor executor = new LocalExecutor(defaults, jars, libDirs);
-        LocalExecutorExtend executor = new LocalExecutorExtend(defaults, jars, libDirs);
+        Properties additionFlinkConfiguration = new Properties();
+        additionFlinkConfiguration.put("metrics.reporter.promgateway.jobName", sqlFileName);
+        LocalExecutorExtend executor = new LocalExecutorExtend(defaults, jars, libDirs, additionFlinkConfiguration);
         executor.validateSession(sessionContext);
 
         // sql
         String sql = trimSql(readFile(sqlPath));
+
+        // 尊重用户的选择, attention, 需要严格的正则，因为有可能表的字段存在commit单词
+        if (!sql.toLowerCase().matches(".*\\bcommit\\b\\s\\+\\S\\+\\s*;.*")) {
+            sql += ";\nCOMMIT " + sqlFileName;
+        }
 
         return new ContextInfoEntity(checkPointEntity, executor, sessionContext, sql);
 

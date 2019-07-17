@@ -109,7 +109,7 @@ public class LocalExecutorExtend implements Executor {
     /**
      * Creates a local executor for submitting table programs and retrieving results.
      */
-    public LocalExecutorExtend(URL defaultEnv, List<URL> jars, List<URL> libraries) {
+    public LocalExecutorExtend(URL defaultEnv, List<URL> jars, List<URL> libraries, Properties additionFlinkConfiguration) {
         // discover configuration
         final String flinkConfigDir;
         try {
@@ -118,7 +118,7 @@ public class LocalExecutorExtend implements Executor {
 
             // load the global configuration
             this.flinkConfig = GlobalConfiguration.loadConfiguration(flinkConfigDir);
-
+            additionFlinkConfiguration.forEach((k, v) -> this.flinkConfig.setString(k.toString(), v.toString()));
             // initialize default file system
             try {
                 FileSystem.initialize(this.flinkConfig);
@@ -569,11 +569,11 @@ public class LocalExecutorExtend implements Executor {
         final T clusterId = context.getClusterId();
         ClusterClient<T> clusterClient = clusterDescriptor.retrieve(clusterId);
 
-        JSONObject request = (JSONObject)JSON.parse(requestBody);
-        JobID jobId = JobID.fromHexString((String)request.get("jobid"));
-        Map<String,String> vertexs = (Map<String,String>)request.get("vertex-parallelism-resource");
+        JSONObject request = (JSONObject) JSON.parse(requestBody);
+        JobID jobId = JobID.fromHexString((String) request.get("jobid"));
+        Map<String, String> vertexs = (Map<String, String>) request.get("vertex-parallelism-resource");
 
-        List<JobVertexID> jobVertexIDs =vertexs.keySet().stream().map((vertexId) -> {
+        List<JobVertexID> jobVertexIDs = vertexs.keySet().stream().map((vertexId) -> {
             return JobVertexID.fromHexString(vertexId);
         }).collect(Collectors.toList());
 
@@ -605,8 +605,8 @@ public class LocalExecutorExtend implements Executor {
         final T clusterId = context.getClusterId();
         ClusterClient<T> clusterClient = clusterDescriptor.retrieve(clusterId);
 
-        JSONObject request = (JSONObject)JSON.parse(requestBody);
-        JobID jobId = JobID.fromHexString((String)request.get("jobid"));
+        JSONObject request = (JSONObject) JSON.parse(requestBody);
+        JobID jobId = JobID.fromHexString((String) request.get("jobid"));
 
         try {
             CompletableFuture<JobStatus> resutlFuture = clusterClient.getJobStatus(jobId);
@@ -623,7 +623,6 @@ public class LocalExecutorExtend implements Executor {
     }
 
     /**
-     *
      * @param session
      * @param statement
      * @return
@@ -633,7 +632,7 @@ public class LocalExecutorExtend implements Executor {
         return commitJobInternal(context, statement);
     }
 
-    private <C>  ProgramTargetDescriptor commitJobInternal(ExecutionContext<C> context, String statement) {
+    private <C> ProgramTargetDescriptor commitJobInternal(ExecutionContext<C> context, String statement) {
         final ExecutionContext.EnvironmentInstance envInst = context.createEnvironmentInstance();
 
         // create job graph with dependencies
