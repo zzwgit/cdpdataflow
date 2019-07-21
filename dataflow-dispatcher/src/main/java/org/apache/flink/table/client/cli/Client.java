@@ -1,7 +1,10 @@
 package org.apache.flink.table.client.cli;
 
 import com.alibaba.fastjson.JSON;
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.Unirest;
 import io.infinivision.flink.client.LocalExecutorExtend;
+import org.apache.commons.io.FileUtils;
 import org.apache.flink.runtime.jobgraph.JobStatus;
 import org.apache.flink.table.api.TableSchema;
 import org.apache.flink.table.client.SqlClientException;
@@ -11,6 +14,7 @@ import org.apache.flink.table.client.gateway.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -268,6 +272,22 @@ public class Client {
 	private String callCommitJob(SqlCommandCall cmdCall) {
 		try {
 			ProgramTargetDescriptor result = executor.commitJob(context, cmdCall.operands[0]);
+			try {
+				String[] hostPort = result.getWebInterfaceUrl()
+						.replaceAll("https?://", "")
+						.replaceAll("/", "")
+						.split(":");
+                HttpResponse<String> response = Unirest.get("http://localhost:8083/newapp")
+                        .queryString("appId", result.getClusterId())
+                        .queryString("host", hostPort[0])
+                        .queryString("port", hostPort[1])
+                        .asString();
+                if (response.getStatus() != 200) {
+                    LOG.error("add job to history server error {}", response.getBody());
+                }
+            } catch (Exception e) {
+				LOG.error("add job to history server error",e);
+			}
 			printInfo("---------------------------------------------------------------------------------------");
 			printInfo("commit with:"+result.toString());
 			return JSON.toJSONString(result);
