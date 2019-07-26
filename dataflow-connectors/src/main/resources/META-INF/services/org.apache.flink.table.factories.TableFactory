@@ -16,3 +16,4 @@
 io.infinivision.flink.connectors.postgres.PostgresTableFactory
 io.infinivision.flink.connectors.hbase.HBase121TableFactory
 io.infinivision.flink.connectors.clickhouse.ClickHouseTableFactory
+io.infinivision.flink.connectors.http.HttpTableFactory
