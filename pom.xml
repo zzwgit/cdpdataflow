@@ -281,6 +281,7 @@ under the License.
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
                             <artifactSet>
                                 <excludes>
                                     <exclude>com.alibaba.blink:force-shading</exclude>
