@@ -2,8 +2,11 @@ package io.infinivision.flink.connectors.clickhouse;
 
 import io.infinivision.flink.connectors.utils.CommonTableOptions;
 import io.infinivision.flink.connectors.utils.JDBCTableOptions;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.java.io.jdbc.JDBCOptions;
 import org.apache.flink.table.api.RichTableSchema;
+import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.api.types.InternalType;
 import org.apache.flink.table.dataformat.BaseRow;
 import org.apache.flink.table.factories.BatchCompatibleTableSinkFactory;
@@ -139,6 +142,31 @@ public class ClickHouseTableFactory implements
         Preconditions.checkArgument(columnNames.length == nullables.length,
                 "columnNames length must be equal to nullable length!");
 
+        // validate array field
+        String field = prop.getString(ClickHouseTableOptions.ARRAY_FIELD);
+        String[] arrayField = StringUtils.isNotBlank(field) ? StringUtils.split(field, ",") : null;
+
+        if (ArrayUtils.isNotEmpty(arrayField)) {
+            for (String item : arrayField) {
+                int length = columnNames.length;
+                int index = 0;
+                for (; index < length; index++) {
+                    if (item.equals(columnNames[index])) {
+                        break;
+                    }
+                }
+
+                if (index == length) {
+                    throw new IllegalArgumentException(String.format("arrayField: %s was not in the column list", item));
+                }
+
+                // check the column type. the array field type must be VARBINARY
+                if (!columnTypes[index].equals(DataTypes.BYTE_ARRAY)) {
+                    throw new IllegalArgumentException("arrayField type must be VARBINARY");
+                }
+            }
+        }
+
         //ClickHouseTableSinkBuilder.
         ClickHouseTableSinkBuilder builder = ClickHouseTableSinkBuilder.builder();
         builder.driverName(DRIVERNAME)
@@ -149,6 +177,10 @@ public class ClickHouseTableFactory implements
                 .password(prop.getString(JDBCOptions.PASSWORD))
                 .tableName(prop.getString(JDBCOptions.TABLE_NAME))
                 .updateMode(prop.getString(JDBCTableOptions.UPDATE_MODE));
+
+        if (ArrayUtils.isNotEmpty(arrayField)) {
+            builder.setArrayFields(arrayField);
+        }
 
         Set<String> primaryKeys = new HashSet<>();
         Set<Set<String>> uniqueKeys = new HashSet<>();

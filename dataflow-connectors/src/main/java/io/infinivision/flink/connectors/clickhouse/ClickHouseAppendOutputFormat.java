@@ -1,10 +1,15 @@
 package io.infinivision.flink.connectors.clickhouse;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.google.common.collect.Maps;
 import io.infinivision.flink.connectors.jdbc.JDBCBaseOutputFormat;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.flink.types.Row;
 
+import java.io.UnsupportedEncodingException;
+import java.sql.Array;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Map;
@@ -21,8 +26,9 @@ public class ClickHouseAppendOutputFormat extends JDBCBaseOutputFormat {
     private String[] fieldNames;
     private int[] fieldSQLTypes;
     private int batchSize;
+    private String[] arrayFields;
 
-    public ClickHouseAppendOutputFormat(String userName, String password, String driverName, String driverVersion, String dbURL, String tableName, String[] fieldNames, int[] fieldSQLTypes, int batchSize) {
+    public ClickHouseAppendOutputFormat(String userName, String password, String driverName, String driverVersion, String dbURL, String tableName, String[] fieldNames, int[] fieldSQLTypes, int batchSize, String[] arrayFields) {
         super(userName, password, driverName, driverVersion, dbURL, tableName, fieldNames, fieldSQLTypes);
         this.userName = userName;
         this.password = password;
@@ -34,6 +40,7 @@ public class ClickHouseAppendOutputFormat extends JDBCBaseOutputFormat {
         this.fieldSQLTypes = fieldSQLTypes;
         this.batchSize = batchSize;
         this.batchInterval(batchSize);
+        this.arrayFields = arrayFields;
     }
 
     @Override
@@ -124,7 +131,15 @@ public class ClickHouseAppendOutputFormat extends JDBCBaseOutputFormat {
                             case java.sql.Types.BINARY:
                             case java.sql.Types.VARBINARY:
                             case java.sql.Types.LONGVARBINARY:
-                                statement().setBytes(index + 1, (byte[]) row.getField(index));
+                                //根据with配置中指定需要转换为数组格式存储到ck时，进行相关转换
+                                if (ArrayUtils.isNotEmpty(arrayFields) && ArrayUtils.contains(arrayFields, fieldNames[index])) {
+                                    byte[] tempValue = (byte[]) row.getField(index);
+                                    JSONArray array = JSON.parseArray(new String(tempValue, "UTF-8"));
+                                    Array dbArray = dbConn().createArrayOf("Object", array.toArray());
+                                    statement().setArray(index + 1, dbArray);
+                                } else {
+                                    statement().setBytes(index + 1, (byte[]) row.getField(index));
+                                }
                                 break;
                             default:
                                 statement().setObject(index + 1, row.getField(index));
@@ -135,6 +150,8 @@ public class ClickHouseAppendOutputFormat extends JDBCBaseOutputFormat {
                 }
             }
         } catch (SQLException e) {
+            throw new RuntimeException("Preparation of ClickHouse statement failed.", e);
+        } catch (UnsupportedEncodingException e) {
             throw new RuntimeException("Preparation of ClickHouse statement failed.", e);
         }
 

@@ -6,8 +6,18 @@ import io.infinivision.flink.connectors.jdbc.JDBCTableSinkBuilder;
 
 public class ClickHouseTableSinkBuilder extends JDBCTableSinkBuilder {
 
+    private String[] arrayFields;
+
     public static ClickHouseTableSinkBuilder builder() {
         return new ClickHouseTableSinkBuilder();
+    }
+
+    public String[] getArrayFields() {
+        return arrayFields;
+    }
+
+    public void setArrayFields(String[] arrayFields) {
+        this.arrayFields = arrayFields;
     }
 
     @Override
@@ -22,7 +32,8 @@ public class ClickHouseTableSinkBuilder extends JDBCTableSinkBuilder {
                 this.tableName(),
                 this.schema().get().getColumnNames(),
                 this.parameterTypes(),
-                this.batchSize()
+                this.batchSize(),
+                this.arrayFields
         );
 
         return new ClickHouseTableSink(outputFormat);
