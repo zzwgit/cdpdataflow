@@ -17,28 +17,33 @@ public class JsonArrayContainsFunction extends ScalarFunction {
 
         if (null == values || values.length != 2) {
             throw new RuntimeException("arg length must 2!");
-        } else {
-            String data = (String) values[ARRAY_IDX];
-            JSONArray array = JSON.parseArray(data);
-
-            switch (values[VALUE_IDX].getClass().getName()) {
-                case "java.lang.String":
-                    if (array.contains(values[VALUE_IDX])) {
-                        result = true;
-                    }
-                    break;
-                case "java.lang.Integer":
-                    if (array.contains(values[VALUE_IDX])) {
-                        result = true;
-                    }
-                    break;
-                case "java.lang.Float":
-                case "java.lang.Double":
-                    BigDecimal value = new BigDecimal(String.valueOf(values[VALUE_IDX]));
-                    result = array.stream().anyMatch(i -> ((BigDecimal) i).compareTo(value) == 0);
-                    break;
-            }
         }
+
+        if (null == values[ARRAY_IDX] || null == values[VALUE_IDX]) {
+            return result;
+        }
+
+        String data = (String) values[ARRAY_IDX];
+        JSONArray array = JSON.parseArray(data);
+
+        switch (values[VALUE_IDX].getClass().getName()) {
+            case "java.lang.String":
+                if (array.contains(values[VALUE_IDX])) {
+                    result = true;
+                }
+                break;
+            case "java.lang.Integer":
+                if (array.contains(values[VALUE_IDX])) {
+                    result = true;
+                }
+                break;
+            case "java.lang.Float":
+            case "java.lang.Double":
+                BigDecimal value = new BigDecimal(String.valueOf(values[VALUE_IDX]));
+                result = array.stream().anyMatch(i -> ((BigDecimal) i).compareTo(value) == 0);
+                break;
+        }
+
         return result;
     }
 
@@ -51,6 +56,9 @@ public class JsonArrayContainsFunction extends ScalarFunction {
         System.err.println(contains.eval("[\"1\",\"2\",\"3\"]", 1));
         System.err.println(contains.eval("[1,2,3]", "1"));
         System.err.println(contains.eval("[1,2,3]", 1));
+
+        System.err.println(contains.eval(null, 1));
+        System.err.println(contains.eval("[1,2,3]", null));
     }
 
 }
