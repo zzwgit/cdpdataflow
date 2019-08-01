@@ -10,23 +10,24 @@ import org.apache.flink.table.util.TableProperties
 import org.apache.flink.types.Row
 import org.apache.flink.table.api.scala._
 import org.apache.flink.api.scala._
-import org.apache.flink.streaming.api.functions.async.ResultFuture
-import org.apache.flink.table.dataformat.{BaseRow, BinaryString}
-
 import scala.collection.mutable
 import scala.collection.JavaConverters._
 
 object PostgresSQLExercise {
 
-
   def main(args: Array[String]): Unit = {
-
+    if (args.length != 2
+      || args(0) != "-mode"
+      ||(!args(1).equalsIgnoreCase("sync")
+      && !args(1).equalsIgnoreCase("async"))) {
+      throw new IllegalArgumentException("usage> mainClass -mode async/sync")
+    }
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     val tEnv = TableEnvironment.getTableEnvironment(env)
     env.setParallelism(1)
 
     // create csv probe table
-    val csvPath = "D:\\test-files\\in\\train10.csv"
+    val csvPath = "/Users/hongtaozhang/Downloads/train10.csv"
     val uniqueKeys = Set(
       Set("aid").asJava
     ).asJava
@@ -49,11 +50,11 @@ object PostgresSQLExercise {
     properties += (("username", "postgres"))
     properties += (("password", "123456"))
     properties += (("tablename", "adfeature"))
-    properties += (("dburl", "jdbc:postgresql://172.19.0.108:25432/postgres"))
+    properties += (("dburl", "jdbc:postgresql://localhost:5432/postgres"))
     properties += (("mode", "async"))
-    properties += (("Cache", "NONE"))
+    properties += (("Cache", "LRU"))
     properties += (("CacheTTLms", "3600000"))
-    properties += (("asynctimeout", "100000"))
+    properties += (("asynctimeout", "10000"))
     properties += (("bufferCapacity", "100"))
 
     val tableProperties = new TableProperties
@@ -65,7 +66,7 @@ object PostgresSQLExercise {
 
     // create csv table sink
     val csvSinkProperties = mutable.Map[String, String]()
-    csvSinkProperties += (("path", "D:\\test-files\\out\\train_join_output.csv"))
+    csvSinkProperties += (("path", "/Users/hongtaozhang/Downloads/train_join_output.csv"))
     csvSinkProperties += (("updateMode", "append"))
     val csvSinkTableProperties = new TableProperties
     csvSinkTableProperties.putProperties(csvSinkProperties.asJava)

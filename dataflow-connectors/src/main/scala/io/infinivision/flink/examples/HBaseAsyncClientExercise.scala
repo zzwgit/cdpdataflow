@@ -17,9 +17,8 @@ object HBaseAsyncClientExercise {
     val priorConfig = javax.security.auth.login.Configuration.getConfiguration
     val currentConfig = new DynamicConfiguration(priorConfig)
     val loginContextName = "HBaseClient"
-    //val keyTab = "D:\\test-files\\hongtaozhang.keytab"
-    val keyTab = "D:\\test-files\\hongtaozhang.keytab"
-    val principal = "hongtaozhang@MCD.COM.CN"
+    val keyTab = "/home/flink/keytab/infinivision_flink_user.keytab"
+    val principal = "infinivision_flink_user"
     currentConfig.addAppConfigurationEntry(loginContextName, KerberosUtils.keytabEntry(keyTab, principal))
     javax.security.auth.login.Configuration.setConfiguration(currentConfig)
   }
@@ -33,10 +32,10 @@ object HBaseAsyncClientExercise {
 
     //    System.setProperty("java.security.auth.login.config", "/home/flink/hbase_jaas.conf")
     val asyncConfig = new Config()
-    asyncConfig.overrideConfig("hbase.zookeeper.quorum", "shoyi05plpebdp019.mcd.com.cn,shoyi04plpebdp015.mcd.com.cn")
+    asyncConfig.overrideConfig("hbase.zookeeper.quorum", "mcdcdh2.cloud.cn.mcd.com,mcdcdh1.cloud.cn.mcd.com,mcdcdh3.cloud.cn.mcd.com")
     asyncConfig.overrideConfig("hbase.security.auth.enable", "true")
     asyncConfig.overrideConfig("hbase.security.authentication", "kerberos")
-    asyncConfig.overrideConfig("hbase.kerberos.regionserver.principal", "hbase/_HOST@MCD.COM.CN")
+    asyncConfig.overrideConfig("hbase.kerberos.regionserver.principal", "hbase/_HOST@CLOUD.CN.MCD.COM")
     asyncConfig.overrideConfig("hbase.rpc.protection", "authentication")
     asyncConfig.overrideConfig("hbase.sasl.clientconfig", "HBaseClient")
     //    asyncConfig.overrideConfig("java.security.auth.login.config", "/home/flink/jass.conf")
@@ -44,9 +43,9 @@ object HBaseAsyncClientExercise {
     println(asyncConfig.dumpConfiguration())
     val hClient = new HBaseClient(asyncConfig)
 
-    val tableName = "infinivision:id_mapping_mid"
-    val rowKey = "mid1"
-    val getRequest = new GetRequest(tableName, Bytes.UTF8(rowKey))
+    val tableName = "infinivision:ad_feature"
+    val rowKey = 2118
+    val getRequest = new GetRequest(tableName, Bytes.fromInt(rowKey))
     val defered = hClient.get(getRequest)
     defered.addCallback[Unit](new Callback[Unit, util.ArrayList[KeyValue]] {
       override def call(cells: util.ArrayList[KeyValue]): Unit = {
