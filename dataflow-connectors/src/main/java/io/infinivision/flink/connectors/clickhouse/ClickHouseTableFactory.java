@@ -225,6 +225,7 @@ public class ClickHouseTableFactory implements
     public List<String> supportedProperties() {
         List<String> properties = new ArrayList<>(JDBCOptions.SUPPORTED_KEYS);
         properties.addAll(JDBCTableOptions.SUPPORTED_KEYS);
+        properties.addAll(ClickHouseTableOptions.SUPPORTED_KEYS);
         return properties;
     }
 
