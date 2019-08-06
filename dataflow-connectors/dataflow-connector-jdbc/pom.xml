@@ -1,0 +1,115 @@
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.infinivision.flink</groupId>
+        <artifactId>dataflow-connectors</artifactId>
+        <version>1.0</version>
+    </parent>
+
+    <artifactId>dataflow-connectors-jdbc</artifactId>
+    <name>dataflow-connectors-jdbc</name>
+    <packaging>jar</packaging>
+
+    <properties>
+        <postgres.connector.version>9.4.1212</postgres.connector.version>
+        <vertx.version>3.5.4</vertx.version>
+        <hbase.version>1.2.1</hbase.version>
+    </properties>
+
+
+    <dependencies>
+
+        <dependency>
+            <groupId>io.infinivision.flink</groupId>
+            <artifactId>dataflow-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.infinivision.flink</groupId>
+            <artifactId>dataflow-udfs</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba.blink</groupId>
+            <artifactId>flink-jdbc</artifactId>
+        </dependency>
+
+        <!--异步数据库连接-->
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-jdbc-client</artifactId>
+            <version>${vertx.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-core</artifactId>
+            <version>${vertx.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba.blink</groupId>
+            <artifactId>flink-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.blink</groupId>
+            <artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
+        </dependency>
+        <!--flink client-->
+        <dependency>
+            <groupId>com.alibaba.blink</groupId>
+            <artifactId>flink-clients_${scala.binary.version}</artifactId>
+        </dependency>
+
+        <!--add scala package-->
+        <dependency>
+            <groupId>com.alibaba.blink</groupId>
+            <artifactId>flink-scala_${scala.binary.version}</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.blink</groupId>
+            <artifactId>flink-streaming-scala_${scala.binary.version}</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba.blink</groupId>
+            <artifactId>flink-table_${scala.binary.version}</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba.blink</groupId>
+            <artifactId>flink-sql-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+        </dependency>
+
+    </dependencies>
+</project>
