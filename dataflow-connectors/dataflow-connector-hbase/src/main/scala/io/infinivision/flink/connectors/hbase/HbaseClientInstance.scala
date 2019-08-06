@@ -1,5 +1,7 @@
 package io.infinivision.flink.connectors.hbase
 
+import org.hbase.async.{Config, HBaseClient}
+
 object HbaseClientInstance {
 
   var hbaseClient: HBaseClient = _
