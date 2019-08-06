@@ -22,13 +22,13 @@ under the License.
 
     <parent>
         <groupId>io.infinivision.flink</groupId>
-        <artifactId>cdpdataflow</artifactId>
+        <artifactId>dataflow-connectors</artifactId>
         <version>1.0</version>
     </parent>
 
-    <artifactId>dataflow-connectors</artifactId>
-    <name>dataflow-connectors</name>
-    <packaging>pom</packaging>
+    <artifactId>dataflow-connectors-jar</artifactId>
+    <name>dataflow-connectors-jar</name>
+    <packaging>jar</packaging>
 
     <properties>
         <postgres.connector.version>9.4.1212</postgres.connector.version>
@@ -36,11 +36,31 @@ under the License.
         <hbase.version>1.2.1</hbase.version>
     </properties>
 
-    <modules>
-        <module>dataflow-connector-common</module>
-        <module>dataflow-connector-clickhouse</module>
-        <module>dataflow-connector-hbase</module>
-        <module>dataflow-connectors-jar</module>
-    </modules>
+    <dependencies>
+        <dependency>
+            <groupId>io.infinivision.flink</groupId>
+            <artifactId>dataflow-connectors-common</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.infinivision.flink</groupId>
+            <artifactId>dataflow-connectors-hbase</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.infinivision.flink</groupId>
+            <artifactId>dataflow-connectors-clickhouse</artifactId>
+            <version>1.0</version>
+        </dependency>
+    </dependencies>
 
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>
