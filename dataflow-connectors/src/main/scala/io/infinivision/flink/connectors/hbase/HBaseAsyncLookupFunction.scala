@@ -125,7 +125,7 @@ class HBaseAsyncLookupFunction(
     LOG.info("=====Dump HBase Async Configuration=====")
     LOG.info(asyncConfig.dumpConfiguration())
 
-    hClient = new HBaseClient(asyncConfig)
+    hClient = HbaseClientInstance.getHbaseClient(asyncConfig)
     if (cacheConfig.hasCache) {
       if (cacheConfig.isLRU) {
         this.cache = buildCache(context.getMetricGroup)
