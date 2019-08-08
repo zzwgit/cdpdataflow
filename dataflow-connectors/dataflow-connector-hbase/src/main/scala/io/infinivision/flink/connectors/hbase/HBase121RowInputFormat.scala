@@ -80,7 +80,11 @@ class HBase121RowInputFormat(
       case (qf, idx) =>
         val qualifierSrcIdx = qualifierSourceIndexes.get(idx)
         val value = result.getValue(qf.f0, qf.f1)
-        resultRow.update(qualifierSrcIdx, inputFieldSerializers.get(qualifierSrcIdx).fromHBaseBytes(value))
+        if(null == value){
+          resultRow.update(qualifierSrcIdx, null)
+        }else{
+          resultRow.update(qualifierSrcIdx, inputFieldSerializers.get(qualifierSrcIdx).fromHBaseBytes(value))
+        }
     }
 
     resultRow
