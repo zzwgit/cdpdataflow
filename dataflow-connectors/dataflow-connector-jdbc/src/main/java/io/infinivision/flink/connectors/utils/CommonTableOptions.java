@@ -71,6 +71,9 @@ public abstract class CommonTableOptions {
     public static final ConfigOption<String>  FETCH_SIZE = key("fetchSize".toLowerCase())
             .defaultValue("1000");
 
+    public static final ConfigOption<String>  ASYNC_OUTPUT_MODE = key("asyncOutputMode".toLowerCase())
+            .defaultValue("ORDERED");
+
     // batch size for sink
     public static final ConfigOption<String> BATCH_SIZE = key("batchSize".toLowerCase())
             .defaultValue("5000");
@@ -85,6 +88,7 @@ public abstract class CommonTableOptions {
             BUFFER_CAPACITY.key(),
             TIMEOUT.key(),
             FETCH_SIZE.key(),
-            BATCH_SIZE.key()
+            BATCH_SIZE.key(),
+            ASYNC_OUTPUT_MODE.key()
     );
 }

@@ -1,13 +1,15 @@
 package io.infinivision.flink.connectors.hbase
 
 import org.hbase.async.{Config, HBaseClient}
+import org.slf4j.LoggerFactory
 
-object HbaseClientInstance {
+object HbaseClientHolder {
+  private val LOG = LoggerFactory.getLogger(this.getClass)
 
-  var hbaseClient: HBaseClient = _
-  val lock = new Object
+  private var hbaseClient: HBaseClient = _
+  private val lock = new Object
 
-  def getHbaseClient(asyncConfig: Config): HBaseClient = {
+  def get(asyncConfig: Config): HBaseClient = {
     lock.synchronized {
       if (hbaseClient == null) {
         hbaseClient = new HBaseClient(asyncConfig)
@@ -15,5 +17,4 @@ object HbaseClientInstance {
       hbaseClient
     }
   }
-
 }

@@ -5,7 +5,7 @@ import java.net.URI
 import java.nio.file.{Files, StandardCopyOption}
 import java.util
 import java.util.Collections
-import java.util.concurrent.{CompletableFuture, Executors, TimeUnit}
+import java.util.concurrent.{Executors, TimeUnit}
 
 import com.stumbleupon.async.Callback
 import io.infinivision.flink.connectors.CacheableFunction
@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HConstants
 import org.hbase.async._
 
 import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
 class HBaseAsyncLookupFunction(
                                 tableProperties: TableProperties,
@@ -43,6 +44,7 @@ class HBaseAsyncLookupFunction(
     with Logging {
 
   private val qualifierList: util.List[JTuple3[Array[Byte], Array[Byte], TypeInformation[_]]] = hbaseSchema.getFamilySchema.getFlatByteQualifiers
+  private val familyCount = qualifierList.asScala.map(e => util.Arrays.asList(e.f0: _*)).distinct.size
   private val charset: String = hbaseSchema.getFamilySchema.getStringCharset
   private val inputFieldSerializers: util.List[HBaseBytesSerializer] = new util.ArrayList[HBaseBytesSerializer]()
   private val totalQualifiers: Int = hbaseSchema.getFamilySchema.getTotalQualifiers
@@ -125,7 +127,7 @@ class HBaseAsyncLookupFunction(
     LOG.info("=====Dump HBase Async Configuration=====")
     LOG.info(asyncConfig.dumpConfiguration())
 
-    hClient = HbaseClientInstance.getHbaseClient(asyncConfig)
+    hClient = HbaseClientHolder.get(asyncConfig)
     if (cacheConfig.hasCache) {
       if (cacheConfig.isLRU) {
         this.cache = buildCache(context.getMetricGroup)
@@ -146,10 +148,10 @@ class HBaseAsyncLookupFunction(
     LOG.info("start close HBaseAsyncLookupFunction...")
 
     super.close()
-
-    if (null != hClient) {
-      hClient.shutdown().join(5000)
-    }
+    // we should not close hbase client now as other slots may still using it
+    //    if (null != hClient) {
+    //      hClient.shutdown().join(5000)
+    //    }
     LOG.info("end close HBaseAsyncLookupFunction...")
 
   }
@@ -165,18 +167,14 @@ class HBaseAsyncLookupFunction(
         util.Arrays.equals(family, qf.f0) && util.Arrays.equals(qualifier, qf.f1)
       }
 
-      if (qInfo.isEmpty) {
-        LOG.info(s"can not find family: ${Bytes.pretty(cell.family())}. qualifier: ${Bytes.pretty(cell.qualifier())}")
-        throw new RuntimeException(s"can not find family: ${Bytes.pretty(cell.family())}. qualifier: ${Bytes.pretty(cell.qualifier())}")
+      if (qInfo.nonEmpty) {
+        if (qInfo.size != 1) {
+          LOG.info(s"duplicated family: ${Bytes.pretty(cell.family())}. qualifier: ${Bytes.pretty(cell.qualifier())}")
+          throw new RuntimeException(s"duplicated family: ${Bytes.pretty(cell.family())}. qualifier: ${Bytes.pretty(cell.qualifier())}")
+        }
+        val qualifierSrcIdx = qualifierSourceIndexes.get(qualifierList.indexOf(qInfo.head))
+        reusedRow.update(qualifierSrcIdx, inputFieldSerializers.get(qualifierSrcIdx).fromHBaseBytes(cell.value()))
       }
-
-      if (qInfo.size != 1) {
-        LOG.info(s"duplicated family: ${Bytes.pretty(cell.family())}. qualifier: ${Bytes.pretty(cell.qualifier())}")
-        throw new RuntimeException(s"duplicated family: ${Bytes.pretty(cell.family())}. qualifier: ${Bytes.pretty(cell.qualifier())}")
-      }
-      val qualifierSrcIdx = qualifierSourceIndexes.get(qualifierList.indexOf(qInfo.head))
-      reusedRow.update(qualifierSrcIdx, inputFieldSerializers.get(qualifierSrcIdx).fromHBaseBytes(cell.value()))
-
     })
 
     reusedRow
@@ -210,21 +208,40 @@ class HBaseAsyncLookupFunction(
 
     }
     val getRequest: GetRequest = new GetRequest(hbaseTableName, rk)
+    if (familyCount == 1) {
+      getRequest.family(qualifierList.get(0).f0)
+      qualifierList.asScala.foreach(e => getRequest.qualifier(e.f1))
+    }
     val defered = hClient.get(getRequest)
 
     defered.addCallback[Unit](new Callback[Unit, util.ArrayList[KeyValue]] {
       override def call(cells: util.ArrayList[KeyValue]): Unit = {
-        val result: util.List[BaseRow] =
-          if (cells.size() == 0) {
-            Collections.emptyList()
-          } else {
-            val row = parseResult(rowKey, cells)
-            Collections.singletonList(row)
+        Try {
+          val result: util.List[BaseRow] =
+            if (cells.size() == 0) {
+              Collections.emptyList()
+            } else {
+              val row = parseResult(rowKey, cells)
+              Collections.singletonList(row)
+            }
+          if (cache != null) {
+            cache.put(cacheKey, Option(result))
           }
-        if (cache != null) {
-          cache.put(cacheKey, Option(result))
+          result
         }
-        resultFuture.complete(result)
+        match {
+          case Success(result) =>
+            resultFuture.complete(result)
+          case Failure(exception) =>
+            LOG.error("parse hbase cell error, rowKey=" + rowKey2, exception)
+            resultFuture.completeExceptionally(exception)
+        }
+      }
+    })
+    defered.addErrback[Unit, Throwable](new Callback[Unit, Throwable] {
+      override def call(arg: Throwable): Unit = {
+        LOG.error("look up hbase error", arg)
+        resultFuture.completeExceptionally(arg)
       }
     })
   }

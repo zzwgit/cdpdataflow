@@ -106,9 +106,10 @@ class HBase121TableSource(
       lookupConfig.setAsyncEnabled(true)
       val timeout = tableProperties.getString(CommonTableOptions.TIMEOUT).toLong
       val capacity = tableProperties.getString(CommonTableOptions.BUFFER_CAPACITY).toInt
+      val asyncOutputMode = tableProperties.getString(CommonTableOptions.ASYNC_OUTPUT_MODE)
       lookupConfig.setAsyncBufferCapacity(capacity)
       lookupConfig.setAsyncTimeoutMs(timeout)
-      lookupConfig.setAsyncOutputMode(LookupConfig.AsyncOutputMode.ORDERED)
+      lookupConfig.setAsyncOutputMode(LookupConfig.AsyncOutputMode.valueOf(asyncOutputMode))
     }
     lookupConfig
   }
