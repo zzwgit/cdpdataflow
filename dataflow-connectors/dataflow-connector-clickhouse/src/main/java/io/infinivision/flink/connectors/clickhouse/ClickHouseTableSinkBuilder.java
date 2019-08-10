@@ -3,6 +3,7 @@ package io.infinivision.flink.connectors.clickhouse;
 import io.infinivision.flink.connectors.jdbc.JDBCBaseOutputFormat;
 import io.infinivision.flink.connectors.jdbc.JDBCTableSink;
 import io.infinivision.flink.connectors.jdbc.JDBCTableSinkBuilder;
+import org.apache.commons.lang3.StringUtils;
 
 public class ClickHouseTableSinkBuilder extends JDBCTableSinkBuilder {
 
@@ -33,7 +34,8 @@ public class ClickHouseTableSinkBuilder extends JDBCTableSinkBuilder {
                 this.schema().get().getColumnNames(),
                 this.parameterTypes(),
                 this.batchSize(),
-                this.arrayFields
+                this.arrayFields,
+                StringUtils.isBlank(this.servers()) ? null : this.servers().split(";")
         );
 
         return new ClickHouseTableSink(outputFormat);

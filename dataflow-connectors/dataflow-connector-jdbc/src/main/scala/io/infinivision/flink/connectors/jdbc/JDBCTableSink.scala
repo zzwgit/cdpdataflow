@@ -58,6 +58,7 @@ abstract class JDBCTableSinkBuilder {
   protected var updateMode: String = _
   protected var parameterTypes: Array[Int] = _
   protected var batchSize: Int = _
+  protected var servers: String = _
 
   //batchSize为中间变量，最终传递给JDBCBaseOutputFormat的batchInterval
   def batchSize(batchSize: Int): JDBCTableSinkBuilder = {
@@ -112,6 +113,11 @@ abstract class JDBCTableSinkBuilder {
 
   def updateMode(updateMode: String): JDBCTableSinkBuilder = {
     this.updateMode = updateMode
+    this
+  }
+
+  def servers(serverz: String): JDBCTableSinkBuilder = {
+    this.servers = serverz
     this
   }
 

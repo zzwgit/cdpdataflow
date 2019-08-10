@@ -176,7 +176,8 @@ public class ClickHouseTableFactory implements
                 .userName(prop.getString(JDBCOptions.USER_NAME))
                 .password(prop.getString(JDBCOptions.PASSWORD))
                 .tableName(prop.getString(JDBCOptions.TABLE_NAME))
-                .updateMode(prop.getString(JDBCTableOptions.UPDATE_MODE));
+                .updateMode(prop.getString(JDBCTableOptions.UPDATE_MODE))
+                .servers(prop.getString(JDBCTableOptions.SERVERS));
 
         if (ArrayUtils.isNotEmpty(arrayField)) {
             builder.setArrayFields(arrayField);

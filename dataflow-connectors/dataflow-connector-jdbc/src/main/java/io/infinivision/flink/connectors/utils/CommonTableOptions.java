@@ -78,6 +78,9 @@ public abstract class CommonTableOptions {
     public static final ConfigOption<String> BATCH_SIZE = key("batchSize".toLowerCase())
             .defaultValue("5000");
 
+    public static final ConfigOption<String> SERVERS = key("servers".toLowerCase())
+            .defaultValue("");
+
     public static final List<String> SUPPORTED_KEYS = Arrays.asList(
             VERSION.key(),
             CACHE.key(),
@@ -89,6 +92,7 @@ public abstract class CommonTableOptions {
             TIMEOUT.key(),
             FETCH_SIZE.key(),
             BATCH_SIZE.key(),
-            ASYNC_OUTPUT_MODE.key()
+            ASYNC_OUTPUT_MODE.key(),
+            SERVERS.key()
     );
 }
