@@ -26,6 +26,8 @@ abstract class JDBCBaseOutputFormat(
   protected var statement: PreparedStatement = _
   private var batchCount: Int = 0
   protected var batchInterval: Int = 5000
+  private var lastFlushTime: Long = 0
+
 
   def this(userName: String,
            password: String,
@@ -90,6 +92,13 @@ abstract class JDBCBaseOutputFormat(
       statement.addBatch()
       batchCount += 1
       if (batchCount >= batchInterval) {
+        val curFlushTime = System.currentTimeMillis()
+        val elapsedTime = curFlushTime - lastFlushTime
+        if (elapsedTime > 10*60*1000) { // log every ten minutes...
+          lastFlushTime = curFlushTime
+        } else if ( elapsedTime <= 1000) { // log duration: one second
+          LOG.debug(s"flush $batchCount records to disk...")
+        }
         flush()
       }
     } else {
