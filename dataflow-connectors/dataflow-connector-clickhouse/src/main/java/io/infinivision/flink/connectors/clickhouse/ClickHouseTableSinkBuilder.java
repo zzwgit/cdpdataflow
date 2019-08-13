@@ -35,7 +35,8 @@ public class ClickHouseTableSinkBuilder extends JDBCTableSinkBuilder {
                 this.parameterTypes(),
                 this.batchSize(),
                 this.arrayFields,
-                StringUtils.isBlank(this.servers()) ? null : this.servers().split(";")
+                StringUtils.isBlank(this.servers()) ? null : this.servers().split(";"),
+                this.asyncFlush()
         );
 
         return new ClickHouseTableSink(outputFormat);

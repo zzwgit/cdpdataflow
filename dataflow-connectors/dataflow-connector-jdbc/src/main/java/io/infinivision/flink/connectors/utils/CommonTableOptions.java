@@ -81,6 +81,9 @@ public abstract class CommonTableOptions {
     public static final ConfigOption<String> SERVERS = key("servers".toLowerCase())
             .defaultValue("");
 
+    public static final ConfigOption<Boolean> ASYNC_FLUSH = key("asyncFlush".toLowerCase())
+            .defaultValue(false);
+
     public static final List<String> SUPPORTED_KEYS = Arrays.asList(
             VERSION.key(),
             CACHE.key(),
@@ -93,6 +96,7 @@ public abstract class CommonTableOptions {
             FETCH_SIZE.key(),
             BATCH_SIZE.key(),
             ASYNC_OUTPUT_MODE.key(),
-            SERVERS.key()
+            SERVERS.key(),
+            ASYNC_FLUSH.key()
     );
 }

@@ -59,6 +59,7 @@ abstract class JDBCTableSinkBuilder {
   protected var parameterTypes: Array[Int] = _
   protected var batchSize: Int = _
   protected var servers: String = _
+  protected var asyncFlush: Boolean = _
 
   //batchSize为中间变量，最终传递给JDBCBaseOutputFormat的batchInterval
   def batchSize(batchSize: Int): JDBCTableSinkBuilder = {
@@ -118,6 +119,11 @@ abstract class JDBCTableSinkBuilder {
 
   def servers(serverz: String): JDBCTableSinkBuilder = {
     this.servers = serverz
+    this
+  }
+
+  def asyncFlush(asyncFlush: Boolean) : JDBCTableSinkBuilder = {
+    this.asyncFlush = asyncFlush
     this
   }
 

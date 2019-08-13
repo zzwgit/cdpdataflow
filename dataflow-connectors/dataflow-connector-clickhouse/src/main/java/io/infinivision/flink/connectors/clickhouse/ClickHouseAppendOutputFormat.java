@@ -29,8 +29,8 @@ public class ClickHouseAppendOutputFormat extends JDBCBaseOutputFormat {
 	private int batchSize;
 	private String[] arrayFields;
 
-	public ClickHouseAppendOutputFormat(String userName, String password, String driverName, String driverVersion, String dbURL, String tableName, String[] fieldNames, int[] fieldSQLTypes, int batchSize, String[] arrayFields, String[] servers) {
-		super(userName, password, driverName, driverVersion, dbURL, tableName, fieldNames, fieldSQLTypes, ArrayUtils.isEmpty(servers) ? Option.empty() : Option.apply(servers));
+	public ClickHouseAppendOutputFormat(String userName, String password, String driverName, String driverVersion, String dbURL, String tableName, String[] fieldNames, int[] fieldSQLTypes, int batchSize, String[] arrayFields, String[] servers, boolean asyncFlush) {
+		super(userName, password, driverName, driverVersion, dbURL, tableName, fieldNames, fieldSQLTypes, ArrayUtils.isEmpty(servers) ? Option.empty() : Option.apply(servers), asyncFlush);
 		this.userName = userName;
 		this.password = password;
 		this.driverName = driverName;
