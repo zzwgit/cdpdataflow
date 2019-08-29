@@ -41,6 +41,7 @@ abstract class JDBCBaseOutputFormat(
   private val pendingFlush = new AtomicInteger(0)
   private var fillBatchMoreThanOneSecond: Boolean = false
   private var lastLoggingFlushTime: Long= 0
+  private var taskNum: Int = 0
 
   def this(userName: String,
            password: String,
@@ -96,9 +97,10 @@ abstract class JDBCBaseOutputFormat(
   }
 
   override def open(taskNumber: Int, numTasks: Int): Unit = {
+    this.taskNum = taskNumber
     if (asyncFlush) {
       LOG.info("this jdbc output mode is async flush...")
-      taskExecutor = Executors.newFixedThreadPool(4)
+      taskExecutor = Executors.newFixedThreadPool(1)
       ec = ExecutionContext.fromExecutor(taskExecutor)
     }
     servers.foreach { address =>
@@ -132,7 +134,6 @@ abstract class JDBCBaseOutputFormat(
       statement.addBatch()
       batchCount += 1
       if (batchCount >= batchInterval) {
-        logDebugFlush()
         flush()
       }
     } else {
@@ -141,8 +142,10 @@ abstract class JDBCBaseOutputFormat(
 
   }
 
-  private def logDebugFlush(): Unit = {
+  private def logDebugFlush(stmt: PreparedStatement): Unit = {
     val curFlushTime = System.currentTimeMillis()
+    flushBatch(stmt)
+    val flushCost = System.currentTimeMillis()-curFlushTime
     val batchCostTime = curFlushTime - lastFlushTime
     if (batchCostTime > 1000) {
       fillBatchMoreThanOneSecond = true
@@ -156,23 +159,27 @@ abstract class JDBCBaseOutputFormat(
       lastLoggingFlushTime = curFlushTime
     } else if (elapsedTime <= 1000 || fillBatchMoreThanOneSecond) {
       // log duration: one second, if one batch more one second, log every batch
-      LOG.debug("Thread={} collect one batch cost {}ms, flush {} records to disk...", Thread.currentThread().getName, batchCostTime.toString, batchCount.toString)
+      LOG.debug("taskNum={} collect one batch cost {}ms, flush {} records to disk, flush cost {}ms ...", taskNum.toString, batchCostTime.toString, batchCount.toString, flushCost.toString)
       fillBatchMoreThanOneSecond = false
     }
   }
 
+  private def flushBatch(stmt:PreparedStatement): Unit = {
+      stmt.executeBatch()
+  }
+
   def flush(): Unit = {
+    if (hasError) {
+      throw new RuntimeException("previous flush error occurred...exit...")
+    }
     // if too many pendingFlush, use syn mode
     val p = pendingFlush.get()
-    if (asyncFlush && p < 4) {
-      if (hasError) {
-        throw new RuntimeException("previous flush error occurred...exit...")
-      }
+    if (asyncFlush && p == 0) {
       val old = statement
       statement = dbConn.prepareStatement(sql)
       pendingFlush.incrementAndGet()
       val future1 = Future {
-        old.executeBatch()
+        flushBatch(old)
         old.close() // remember close the statement
       }
       future1 onComplete {
@@ -180,14 +187,15 @@ abstract class JDBCBaseOutputFormat(
           pendingFlush.decrementAndGet()
         case Failure(e) =>
           LOG.error("flush error occurred ", e)
+          pendingFlush.decrementAndGet()
           // notify
           hasError = true
       }
     } else {
-      if (p >= 5) {
+      if (p >= 1) {
         LOG.debug("too many pending flush... {}",p)
       }
-      statement.executeBatch()
+      logDebugFlush(statement)
     }
     batchCount = 0
   }
@@ -210,7 +218,12 @@ abstract class JDBCBaseOutputFormat(
     }
 
     if (taskExecutor != null) {
-      Thread.sleep(500)
+      while (pendingFlush.get() != 0) { // waiting last flush
+        Thread.sleep(200)
+      }
+      if (hasError) {
+        throw new RuntimeException("last flush error...")
+      }
       taskExecutor.shutdown()
       taskExecutor.awaitTermination(java.lang.Long.MAX_VALUE, TimeUnit.NANOSECONDS)
     }

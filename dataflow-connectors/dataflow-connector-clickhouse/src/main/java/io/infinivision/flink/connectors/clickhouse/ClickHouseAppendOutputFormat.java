@@ -7,12 +7,13 @@ import io.infinivision.flink.connectors.jdbc.JDBCBaseOutputFormat;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.flink.types.Row;
+import ru.yandex.clickhouse.ClickHousePreparedStatementImpl;
 import scala.Option;
 
-import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Method;
 import java.sql.Array;
-import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -28,6 +29,9 @@ public class ClickHouseAppendOutputFormat extends JDBCBaseOutputFormat {
 	private int[] fieldSQLTypes;
 	private int batchSize;
 	private String[] arrayFields;
+	private transient Method setBind;
+	private boolean[] isArrayField;
+	private Map<Character, String> escapes;
 
 	public ClickHouseAppendOutputFormat(String userName, String password, String driverName, String driverVersion, String dbURL, String tableName, String[] fieldNames, int[] fieldSQLTypes, int batchSize, String[] arrayFields, String[] servers, boolean asyncFlush) {
 		super(userName, password, driverName, driverVersion, dbURL, tableName, fieldNames, fieldSQLTypes, ArrayUtils.isEmpty(servers) ? Option.empty() : Option.apply(servers), asyncFlush);
@@ -42,10 +46,33 @@ public class ClickHouseAppendOutputFormat extends JDBCBaseOutputFormat {
 		this.batchSize = batchSize;
 		this.batchInterval(batchSize);
 		this.arrayFields = arrayFields;
+		this.isArrayField = new boolean[fieldNames.length];
+		for (int i = 0; i < fieldNames.length; i++) {
+			if (ArrayUtils.contains(arrayFields, fieldNames[i])) {
+				isArrayField[i] = true;
+			}
+		}
+		this.escapes = new HashMap<>();
+		this.escapes.put('\\', "\\\\");
+		this.escapes.put('\n', "\\n");
+		this.escapes.put('\t', "\\t");
+		this.escapes.put('\b', "\\b");
+		this.escapes.put('\f', "\\f");
+		this.escapes.put('\r', "\\r");
+		this.escapes.put('\0', "\\0");
+		this.escapes.put('\'', "\\'");
+		this.escapes.put('`', "\\`");
 	}
 
 	@Override
 	public String prepareSql() {
+		try {
+			this.setBind = ClickHousePreparedStatementImpl.class.getDeclaredMethod("setBind", int.class, String.class);
+			this.setBind.setAccessible(true);
+		} catch (NoSuchMethodException e) {
+			LOG().error("access private setBind method error", e);
+			throw new RuntimeException(e);
+		}
 
 		String namePlaceholder = Arrays.stream(fieldNames).map(key -> "`" + key + "`").collect(Collectors.joining(","));
 		String valuePlaceholder = Arrays.stream(fieldNames).map(key -> "?").collect(Collectors.joining(","));
@@ -81,19 +108,44 @@ public class ClickHouseAppendOutputFormat extends JDBCBaseOutputFormat {
 						statement().setNull(index + 1, fieldSQLTypes[index]);
 					} else {
 						switch (fieldSQLTypes[index]) {
-							case java.sql.Types.NULL:
-								statement().setNull(index + 1, fieldSQLTypes[index]);
+							case java.sql.Types.INTEGER:
+								statement().setInt(index + 1, (int) row.getField(index));
 								break;
-							case java.sql.Types.BOOLEAN:
-							case java.sql.Types.BIT:
-								statement().setBoolean(index + 1, (boolean) row.getField(index));
-								break;
+							case java.sql.Types.VARCHAR:
 							case java.sql.Types.CHAR:
 							case java.sql.Types.NCHAR:
-							case java.sql.Types.VARCHAR:
 							case java.sql.Types.LONGVARCHAR:
 							case java.sql.Types.LONGNVARCHAR:
-								statement().setString(index + 1, (String) row.getField(index));
+								String value = (String) row.getField(index);
+								if (isArrayField[index]) {
+									StringBuilder sb = new StringBuilder(value.length() + 5);
+									boolean changed = false;
+									for (int i = 0; i < value.length(); i++) {
+										char c = value.charAt(i);
+										if (this.escapes.containsKey(c)) {
+											sb.append(this.escapes.get(c));
+										} else if (c == '"') { // " may be changed to '
+											boolean needChange = value.charAt(i - 1) != '\\';
+											sb.append(needChange ? '\'' : c);
+											changed |= needChange;
+										} else {
+											sb.append(c);
+										}
+									}
+									setBind.invoke(statement(), index + 1, value.length() == sb.length() && !changed ? value : sb.toString());
+								} else {
+									statement().setString(index + 1, value);
+								}
+								break;
+							case java.sql.Types.DECIMAL:
+							case java.sql.Types.NUMERIC:
+								statement().setBigDecimal(index + 1, (java.math.BigDecimal) row.getField(index));
+								break;
+							case java.sql.Types.FLOAT:
+								statement().setFloat(index + 1, (float) row.getField(index));
+								break;
+							case java.sql.Types.TIMESTAMP:
+								statement().setTimestamp(index + 1, (java.sql.Timestamp) row.getField(index));
 								break;
 							case java.sql.Types.TINYINT:
 								statement().setByte(index + 1, (byte) row.getField(index));
@@ -101,24 +153,14 @@ public class ClickHouseAppendOutputFormat extends JDBCBaseOutputFormat {
 							case java.sql.Types.SMALLINT:
 								statement().setShort(index + 1, (short) row.getField(index));
 								break;
-							case java.sql.Types.INTEGER:
-								statement().setInt(index + 1, (int) row.getField(index));
-								break;
 							case java.sql.Types.BIGINT:
 								statement().setLong(index + 1, (long) row.getField(index));
 								break;
 							case java.sql.Types.REAL:
 								statement().setFloat(index + 1, (float) row.getField(index));
 								break;
-							case java.sql.Types.FLOAT:
-								statement().setFloat(index + 1, (float) row.getField(index));
-								break;
 							case java.sql.Types.DOUBLE:
 								statement().setDouble(index + 1, (double) row.getField(index));
-								break;
-							case java.sql.Types.DECIMAL:
-							case java.sql.Types.NUMERIC:
-								statement().setBigDecimal(index + 1, (java.math.BigDecimal) row.getField(index));
 								break;
 							case java.sql.Types.DATE:
 								statement().setDate(index + 1, (java.sql.Date) row.getField(index));
@@ -126,8 +168,12 @@ public class ClickHouseAppendOutputFormat extends JDBCBaseOutputFormat {
 							case java.sql.Types.TIME:
 								statement().setTime(index + 1, (java.sql.Time) row.getField(index));
 								break;
-							case java.sql.Types.TIMESTAMP:
-								statement().setTimestamp(index + 1, (java.sql.Timestamp) row.getField(index));
+							case java.sql.Types.BOOLEAN:
+							case java.sql.Types.BIT:
+								statement().setBoolean(index + 1, (boolean) row.getField(index));
+								break;
+							case java.sql.Types.NULL:
+								statement().setNull(index + 1, fieldSQLTypes[index]);
 								break;
 							case java.sql.Types.BINARY:
 							case java.sql.Types.VARBINARY:
@@ -150,11 +196,8 @@ public class ClickHouseAppendOutputFormat extends JDBCBaseOutputFormat {
 
 				}
 			}
-		} catch (SQLException e) {
-			throw new RuntimeException("Preparation of ClickHouse statement failed.", e);
-		} catch (UnsupportedEncodingException e) {
+		} catch (Throwable e) {
 			throw new RuntimeException("Preparation of ClickHouse statement failed.", e);
 		}
-
 	}
 }

@@ -2,132 +2,218 @@ package io.infinivision.flink.udfs.json.array;
 
 import com.alibaba.fastjson.JSON;
 import org.apache.flink.shaded.guava18.com.google.common.collect.Lists;
+import org.apache.flink.streaming.api.functions.co.CoMapFunction;
 import org.apache.flink.table.api.dataview.ListView;
 import org.apache.flink.table.api.functions.AggregateFunction;
 import org.apache.flink.table.api.types.DataType;
 import org.apache.flink.table.api.types.DataTypes;
 import org.apache.flink.table.dataformat.GenericRow;
 
-import java.util.Iterator;
-import java.util.List;
+import java.io.Serializable;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class CollectToJsonAggFunction extends AggregateFunction<byte[], GenericRow> {
+	// 封装 数据 和 排序参考key
+	static class Tuple2 implements Serializable {
+		private static final long serialVersionUID = 4827706635758733641L;
+		Object data; // 实际数据
+		List<Comparable> orderKeys;  // 排序参考key
 
-    @Override
-    public GenericRow createAccumulator() {
-        GenericRow acc = new GenericRow(2);
-        // adding list
-        acc.update(0, new ListView<Object>());
-        // retractList
-        acc.update(1, new ListView<Object>());
+		Tuple2(Object data) {
+			this.data = data;
+			this.orderKeys = Collections.emptyList();
+		}
 
-        return acc;
-    }
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			Tuple2 tuple2 = (Tuple2) o;
+			return Objects.equals(data, tuple2.data) &&
+					Objects.equals(orderKeys, tuple2.orderKeys);
+		}
 
-    public void accumulate(GenericRow acc, Object input) throws Exception {
-        if (null != input) {
-            ListView<Object> list = (ListView<Object>) acc.getField(0);
-            list.add(input);
-        }
-    }
+		@Override
+		public int hashCode() {
+			return Objects.hash(data);
+		}
+	}
 
-    public void retract(GenericRow acc, Object input) throws Exception {
-        if (null != input) {
-            ListView<Object> list = (ListView<Object>) acc.getField(0);
-            if (!list.remove(input)) {
-                ListView<Object> retractList = (ListView<Object>) acc.getField(1);
-                retractList.add(input);
-            }
-        }
-    }
 
-    public void merge(GenericRow acc, Iterable<GenericRow> it) throws Exception {
-        Iterator<GenericRow> iter = it.iterator();
-        while (iter.hasNext()) {
-            GenericRow otherAcc = iter.next();
-            ListView<Object> thisList = (ListView<Object>) acc.getField(0);
-            ListView<Object> otherList = (ListView<Object>) otherAcc.getField(0);
-            Iterable<Object> accList = otherList.get();
-            if (accList != null) {
-                Iterator<Object> listIter = accList.iterator();
-                while (listIter.hasNext()) {
-                    thisList.add(listIter.next());
-                }
-            }
+	@Override
+	public GenericRow createAccumulator() {
+		GenericRow acc = new GenericRow(2);
+		// adding list
+		acc.update(0, new ListView<Tuple2>());
+		// retractList
+		acc.update(1, new ListView<Tuple2>());
 
-            ListView<Object> otherRetractList = (ListView<Object>) otherAcc.getField(1);
-            ListView<Object> thisRetractList = (ListView<Object>) acc.getField(1);
-            Iterable<Object> retractList = otherRetractList.get();
-            if (retractList != null) {
-                Iterator<Object> retractListIter = retractList.iterator();
-                List<Object> buffer = null;
-                if (retractListIter.hasNext()) {
-                    buffer = Lists.newArrayList(thisList.get());
-                }
-                boolean listChanged = false;
-                while (retractListIter.hasNext()) {
-                    Object element = retractListIter.next();
-                    if (buffer != null && buffer.remove(element)) {
-                        listChanged = true;
-                    } else {
-                        thisRetractList.add(element);
-                    }
-                }
+		return acc;
+	}
 
-                if (listChanged) {
-                    thisList.clear();
-                    thisList.addAll(buffer);
-                }
-            }
-        }
-    }
+	public void accumulate(GenericRow acc, Object data, Object... orderKeys) throws Exception {
+		if (null != data) {
+			ListView<Tuple2> list = (ListView<Tuple2>) acc.getField(0);
+			list.add(from(data, orderKeys));
+		}
+	}
 
-    @Override
-    public byte[] getValue(GenericRow acc) {
-        ListView<Object> list = (ListView<Object>) acc.getField(0);
-        try {
-            Iterable<Object> values = list.get();
-            if (values == null || !values.iterator().hasNext()) {
-                // return null when the list is empty
-                return null;
-            } else {
-                //values.
-                Object[] out = Lists.newArrayList(values).toArray();
-                String outStr = JSON.toJSONString(out);
-                return outStr.getBytes("UTF-8");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
+	private Tuple2 from(Object data, Object... orderKeys) {
+		Tuple2 t = new Tuple2(data);
+		if (orderKeys != null && orderKeys.length > 0) {
+			t.orderKeys = new ArrayList<>(orderKeys.length);
+			for (Object key : orderKeys) {
+				t.orderKeys.add((Comparable) key);
+			}
+		}
+		return t;
+	}
 
-    public void resetAccumulator(GenericRow acc) {
-        ListView<Object> list = (ListView<Object>) acc.getField(0);
-        ListView<Object> retractList = (ListView<Object>) acc.getField(1);
-        list.clear();
-        retractList.clear();
-    }
+	public void retract(GenericRow acc, Object data, Object... orderKeys) throws Exception {
+		if (null != data) {
+			ListView<Tuple2> list = (ListView<Tuple2>) acc.getField(0);
+			Tuple2 t = from(data, orderKeys);
+			if (!list.remove(t)) {
+				ListView<Tuple2> retractList = (ListView<Tuple2>) acc.getField(1);
+				retractList.add(t);
+			}
+		}
+	}
 
-    @Override
-    public DataType getResultType() {
-        return DataTypes.BYTE_ARRAY;
-    }
+	public void merge(GenericRow acc, Iterable<GenericRow> it) throws Exception {
+		Iterator<GenericRow> iter = it.iterator();
+		while (iter.hasNext()) {
+			GenericRow otherAcc = iter.next();
+			ListView<Tuple2> thisList = (ListView<Tuple2>) acc.getField(0);
+			ListView<Tuple2> otherList = (ListView<Tuple2>) otherAcc.getField(0);
+			Iterable<Tuple2> accList = otherList.get();
+			if (accList != null) {
+				Iterator<Tuple2> listIter = accList.iterator();
+				while (listIter.hasNext()) {
+					thisList.add(listIter.next());
+				}
+			}
 
-    public static void main(String[] args) throws Exception {
-        CollectToJsonAggFunction s = new CollectToJsonAggFunction();
+			ListView<Tuple2> otherRetractList = (ListView<Tuple2>) otherAcc.getField(1);
+			ListView<Tuple2> thisRetractList = (ListView<Tuple2>) acc.getField(1);
+			Iterable<Tuple2> retractList = otherRetractList.get();
+			if (retractList != null) {
+				Iterator<Tuple2> retractListIter = retractList.iterator();
+				List<Tuple2> buffer = null;
+				if (retractListIter.hasNext()) {
+					buffer = Lists.newArrayList(thisList.get());
+				}
+				boolean listChanged = false;
+				while (retractListIter.hasNext()) {
+					Tuple2 element = retractListIter.next();
+					if (buffer != null && buffer.remove(element)) {
+						listChanged = true;
+					} else {
+						thisRetractList.add(element);
+					}
+				}
 
-        GenericRow acc = new GenericRow(2);
-        // adding list
-        acc.update(0, new ListView<Object>());
+				if (listChanged) {
+					thisList.clear();
+					thisList.addAll(buffer);
+				}
+			}
+		}
+	}
 
-        s.accumulate(acc, "1");
-        s.accumulate(acc, "1");
+	@Override
+	public byte[] getValue(GenericRow acc) {
+		ListView<Tuple2> list = (ListView<Tuple2>) acc.getField(0);
+		try {
+			Iterable<Tuple2> values = list.get();
+			if (values == null || !values.iterator().hasNext()) {
+				// return null when the list is empty
+				return null;
+			} else {
+				//values.
+				ArrayList<Tuple2> tuples = Lists.newArrayList(values);
+				tuples.sort((o1, o2) -> {
+					int n = Math.min(o1.orderKeys.size(), o2.orderKeys.size());
+					for (int i = 0; i < n; i++) {
+						Comparable e1 = o1.orderKeys.get(i);
+						Comparable e2 = o2.orderKeys.get(i);
+						if (e1 == null && e2 == null) {
+							continue;
+						}
+						if (e1 == null) {
+							return -1;
+						}
+						if (e2 == null) {
+							return 1;
+						}
+						int t = e1.compareTo(e2);
+						if (t == 0) {
+							continue;
+						}
+						return t;
+					}
+					int t = Integer.compare(o1.orderKeys.size(), o2.orderKeys.size());
+//					if (t != 0) {
+//						return t;
+//					}
+//					if (o1.data == null) {
+//						return -1;
+//					}
+//					if (o2.data == null) {
+//						return 1;
+//					}
+//					if (Comparable.class.isAssignableFrom(o1.data.getClass()) && Comparable.class.isAssignableFrom(o2.data.getClass())) {
+//						return ((Comparable) o1.data).compareTo((Comparable) o2.data);
+//					}
+					return t;
+				});
+				String outStr = JSON.toJSONString(
+						tuples
+								.stream()
+								.map(e -> e.data)
+								.collect(Collectors.toList())
+				);
+				return outStr.getBytes("UTF-8");
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
 
-        byte[] result = s.getValue(acc);
-        System.out.println(new String(result, "UTF-8"));
+	public void resetAccumulator(GenericRow acc) {
+		ListView<Tuple2> list = (ListView<Tuple2>) acc.getField(0);
+		ListView<Tuple2> retractList = (ListView<Tuple2>) acc.getField(1);
+		list.clear();
+		retractList.clear();
+	}
 
-        String ss = "[\"1\",\"1\"]";
+	@Override
+	public DataType getResultType() {
+		return DataTypes.BYTE_ARRAY;
+	}
+
+	public static void main(String[] args) throws Exception {
+		CollectToJsonAggFunction s = new CollectToJsonAggFunction();
+
+		GenericRow acc = new GenericRow(2);
+		// adding list
+		acc.update(0, new ListView<Tuple2>());
+
+		s.accumulate(acc, "1", 2);
+		s.accumulate(acc, "2", 1);
+		s.accumulate(acc, "4");
+		s.accumulate(acc, "3");
+		s.accumulate(acc, "5", -1);
+		s.accumulate(acc, "6", null, null);
+		s.accumulate(acc, "7", null);
+		s.accumulate(acc, (String)null, 0);
+
+		byte[] result = s.getValue(acc);
+		System.out.println(new String(result, "UTF-8"));
+
+//		String ss = "[\"1\",\"1\"]";
 
 //        byte[] result1 = new byte[]{91, 49, 52, 54, 52, 49, 49, 54, 44, 49, 52, 54, 52, 49, 49, 54, 44, 49, 52, 54, 52, 49, 49, 54, 93};
 //        byte[] result2 = new byte[]{91, 52, 51, 51, 57, 55, 50, 50, 93};
@@ -137,5 +223,5 @@ public class CollectToJsonAggFunction extends AggregateFunction<byte[], GenericR
 //        JSONArray array =JSON.parseArray(new String(result1,"UTF-8"));
 //        array.toArray();
 
-    }
+	}
 }

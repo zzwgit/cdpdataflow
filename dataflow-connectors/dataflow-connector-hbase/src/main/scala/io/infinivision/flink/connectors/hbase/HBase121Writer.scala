@@ -34,8 +34,8 @@ class HBase121Writer(
 
   LOG.info(s"HBase121Writer batchSize: $batchSize")
   var batchCounter = 0
-  val pendingPuts: util.List[Put] = new util.ArrayList[Put]()
-  val pendingDeletes: util.List[Delete] = new util.ArrayList[Delete]()
+  var pendingPuts: util.List[Put] = new util.ArrayList[Put](batchSize)
+  var pendingDeletes: util.List[Delete] = new util.ArrayList[Delete](batchSize)
 
   val restorePuts: util.List[Put] = new util.ArrayList[Put]()
   val restoreDeletes: util.List[Delete] = new util.ArrayList[Delete]()
@@ -84,6 +84,7 @@ class HBase121Writer(
 
   override def open(parameters: configuration.Configuration): Unit = {
     super.open(parameters)
+    LOG.info("client buffer size ={}", table.getConfiguration.get("hbase.client.write.buffer"))
   }
 
   override def invoke(input: JTuple2[JBool, Row]): Unit = {
@@ -110,6 +111,12 @@ class HBase121Writer(
         }
       }
 
+      // if current rowkey == last rowkey  replace last
+      val lastPut = pendingPuts.get(pendingPuts.size() - 1)
+      if (java.util.Arrays.asList(lastPut.getRow).equals(java.util.Arrays.asList(rowKey))) {
+        pendingPuts.set(pendingPuts.size() - 1, put)
+        return
+      }
       if (batchCounter < batchSize) {
         pendingPuts.add(put)
         batchCounter += 1
@@ -138,7 +145,12 @@ class HBase121Writer(
 
   def flush(): Unit = {
     // flush pending puts
+    val prev = System.currentTimeMillis()
     table.put(pendingPuts)
+    val post = System.currentTimeMillis()
+    if(post-prev> 1000) {
+      LOG.info(s"flush $batchSize records to hbase cost ${post-prev}ms")
+    }
     pendingPuts.clear()
     // flush pending deletes
     table.delete(pendingDeletes)

@@ -161,9 +161,9 @@ public class ClickHouseTableFactory implements
                 }
 
                 // check the column type. the array field type must be VARBINARY
-                if (!columnTypes[index].equals(DataTypes.BYTE_ARRAY)) {
-                    throw new IllegalArgumentException("arrayField type must be VARBINARY");
-                }
+//                if (!columnTypes[index].equals(DataTypes.BYTE_ARRAY)) {
+//                    throw new IllegalArgumentException("arrayField type must be VARBINARY");
+//                }
             }
         }
 
