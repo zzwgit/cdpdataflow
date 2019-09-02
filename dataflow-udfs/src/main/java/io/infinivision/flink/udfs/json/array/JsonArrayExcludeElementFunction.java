@@ -15,13 +15,21 @@ public class JsonArrayExcludeElementFunction extends ScalarFunction {
 			return 0;
 		}
 
-		JSONArray base = JSON.parseArray((String) values[0]);
+		JSONArray base;
+		if (values[0] instanceof String) {
+			base = JSON.parseArray((String) values[0]);
+		} else if (values[0] instanceof JSONArray) {
+			base = (JSONArray) values[0];
+		} else {
+			throw new RuntimeException("unknown type " + values[0]);
+		}
 		for (int i = 1; i < values.length; i++) {
 			if (values[i] == null) {
 				continue;
 			}
-
-			if (values[i].toString().trim().startsWith("[")) {
+			if (values[i] instanceof JSONArray) {
+				base.removeAll((JSONArray) values[i]);
+			} else if (values[i].toString().trim().startsWith("[")) {
 				JSONArray exclude = JSON.parseArray((String) values[i]);
 				base.removeAll(exclude);
 			} else {

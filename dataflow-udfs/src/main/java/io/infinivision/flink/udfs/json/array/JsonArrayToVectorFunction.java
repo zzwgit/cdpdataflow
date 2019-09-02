@@ -21,7 +21,12 @@ public class JsonArrayToVectorFunction extends ScalarFunction {
 			if (args[0] == null || args[1] == null) {
 				return null;
 			}
-			JSONArray candidate = JSON.parseArray((String) args[0]);
+			JSONArray candidate;
+			if (args[0] instanceof JSONArray) {
+				candidate = (JSONArray) args[0];
+			} else {
+				candidate = JSON.parseArray((String) args[0]);
+			}
 			ArrayList<Integer> result = new ArrayList<>(candidate.size());
 
 			if (args[1].toString().trim().startsWith("[")) {

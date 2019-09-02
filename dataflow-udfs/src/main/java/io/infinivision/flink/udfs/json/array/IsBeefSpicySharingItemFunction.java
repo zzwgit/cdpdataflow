@@ -13,7 +13,12 @@ public class IsBeefSpicySharingItemFunction extends ScalarFunction {
 		String type = (String) args[0];
 		LinkedList<Integer> result = new LinkedList<>();
 		if (beefSpicy.contains(type)) {
-			JSONArray level1 = JSON.parseArray((String) args[1]);
+			JSONArray level1;
+			if (args[1] instanceof JSONArray) {
+				level1 = (JSONArray) args[1];
+			} else {
+				level1 = JSON.parseArray((String) args[1]);
+			}
 			JSONArray protein = JSON.parseArray((String) args[2]);
 			JSONArray level8 = null;
 			if (type.contains("spicy")) {
