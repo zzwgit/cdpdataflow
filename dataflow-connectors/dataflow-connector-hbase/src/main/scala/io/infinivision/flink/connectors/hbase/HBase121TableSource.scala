@@ -57,22 +57,37 @@ class HBase121TableSource(
   }
 
   override def getLookupFunction(lookupKeys: Array[Int]): TableFunction[BaseRow] = {
-    if (lookupKeys == null || lookupKeys.length != 1 || rowKeyIndex != lookupKeys(0)) {
-      throw new RuntimeException("HBase table Lookup Function can only be join on RowKey for now")
+    val cacheConfig: CacheConfig = prepareLookupFunctionParams(lookupKeys)
+    if(! cacheConfig.isAll) {
+      throw new RuntimeException("current sync hbase lookup function only support cache type = all")
     }
-
-    throw new RuntimeException("TODO: HBase TableFunction was not supported so far")
-//    new HBaseLookupFunction(
-//      tableSchema,
-//      hbaseTableName,
-//      hbaseTableSchema,
-//      rowKeyIndex,
-//      qualifierSourceIndexes,
-//      hbaseConfiguration
-//    )
+    new HBaseLookupFunction(
+      tableProperties,
+      tableSchema,
+      hbaseTableName,
+      hbaseTableSchema,
+      rowKeyIndex,
+      qualifierSourceIndexes,
+      hbaseConfiguration,
+      cacheConfig
+    )
   }
 
   override def getAsyncLookupFunction(lookupKeys: Array[Int]): AsyncTableFunction[BaseRow] = {
+    val cacheConfig: CacheConfig = prepareLookupFunctionParams(lookupKeys)
+    new HBaseAsyncLookupFunction(
+      tableProperties,
+      tableSchema,
+      hbaseTableName,
+      hbaseTableSchema,
+      rowKeyIndex,
+      qualifierSourceIndexes,
+      hbaseConfiguration,
+      cacheConfig
+    )
+  }
+
+  private def prepareLookupFunctionParams(lookupKeys: Array[Int]) = {
     if (lookupKeys == null || lookupKeys.length != 1 || rowKeyIndex != lookupKeys(0)) {
       throw new RuntimeException("HBase table Lookup Function can only be join on RowKey for now")
     }
@@ -86,16 +101,7 @@ class HBase121TableSource(
     hbaseValidator.validateAuthLoginOption(properties)
 
     val cacheConfig = CacheConfig.fromTableProperty(tableProperties)
-    new HBaseAsyncLookupFunction(
-      tableProperties,
-      tableSchema,
-      hbaseTableName,
-      hbaseTableSchema,
-      rowKeyIndex,
-      qualifierSourceIndexes,
-      hbaseConfiguration,
-      cacheConfig
-    )
+    cacheConfig
   }
 
   override def getLookupConfig: LookupConfig = {

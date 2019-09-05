@@ -29,8 +29,14 @@ public class JsonArrayToVectorFunction extends ScalarFunction {
 			}
 			ArrayList<Integer> result = new ArrayList<>(candidate.size());
 
-			if (args[1].toString().trim().startsWith("[")) {
-				JSONArray set = JSON.parseArray((String) args[1]);
+			// json case
+			if (args[1] instanceof JSONArray || args[1].toString().trim().startsWith("[")) {
+				JSONArray set;
+				if (args[1] instanceof JSONArray) {
+					set = (JSONArray) args[1];
+				} else {
+					set = JSON.parseArray((String) args[1]);
+				}
 				for (int i = 0; i < candidate.size(); i++) {
 					if (set.contains(candidate.get(i))) {
 						result.add(1);
@@ -40,6 +46,7 @@ public class JsonArrayToVectorFunction extends ScalarFunction {
 				}
 				return JSON.toJSONString(result);
 			} else {
+				// single string case
 				for (int i = 0; i < candidate.size(); i++) {
 					if (((String) args[1]).contains((String) candidate.get(i))) {
 						result.add(1);

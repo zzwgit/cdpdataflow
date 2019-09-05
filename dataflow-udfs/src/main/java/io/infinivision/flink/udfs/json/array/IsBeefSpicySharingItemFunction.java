@@ -12,13 +12,14 @@ public class IsBeefSpicySharingItemFunction extends ScalarFunction {
 	public String eval(Object... args) {
 		String type = (String) args[0];
 		LinkedList<Integer> result = new LinkedList<>();
+		JSONArray level1;
+		if (args[1] instanceof JSONArray) {
+			level1 = (JSONArray) args[1];
+		} else {
+			level1 = JSON.parseArray((String) args[1]);
+		}
+
 		if (beefSpicy.contains(type)) {
-			JSONArray level1;
-			if (args[1] instanceof JSONArray) {
-				level1 = (JSONArray) args[1];
-			} else {
-				level1 = JSON.parseArray((String) args[1]);
-			}
 			JSONArray protein = JSON.parseArray((String) args[2]);
 			JSONArray level8 = null;
 			if (type.contains("spicy")) {
@@ -43,9 +44,13 @@ public class IsBeefSpicySharingItemFunction extends ScalarFunction {
 				}
 			}
 		} else {
-			JSONArray level1 = JSON.parseArray((String) args[1]);
 			JSONArray level3 = JSON.parseArray((String) args[2]);
-			JSONArray qty = JSON.parseArray((String) args[3]);
+			JSONArray qty;
+			if (args[3] instanceof JSONArray) {
+				qty = (JSONArray) args[3];
+			} else {
+				qty = JSON.parseArray((String) args[3]);
+			}
 			if (level1.size() < 5) {
 				for (int i = 0; i < level1.size(); i++) {
 					result.add(0);

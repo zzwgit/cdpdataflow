@@ -1,6 +1,7 @@
 package io.infinivision.flink.connectors.jdbc
 
 import java.lang.{Boolean => JBool}
+import java.net.InetAddress
 import java.sql.{Connection, DriverManager, PreparedStatement, SQLException}
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import java.util.concurrent.{ExecutorService, Executors, TimeUnit}
@@ -38,6 +39,7 @@ abstract class JDBCBaseOutputFormat(
   @transient private var taskExecutor: ExecutorService = _
   @transient implicit  private var ec:ExecutionContext = _
   @volatile private var  hasError: Boolean = false
+  private var flushException: java.lang.Throwable = _
   private val pendingFlush = new AtomicInteger(0)
   private var fillBatchMoreThanOneSecond: Boolean = false
   private var lastLoggingFlushTime: Long= 0
@@ -170,7 +172,7 @@ abstract class JDBCBaseOutputFormat(
 
   def flush(): Unit = {
     if (hasError) {
-      throw new RuntimeException("previous flush error occurred...exit...")
+      throw new RuntimeException("previous flush error occurred...exit...", flushException)
     }
     // if too many pendingFlush, use syn mode
     val p = pendingFlush.get()
@@ -188,6 +190,7 @@ abstract class JDBCBaseOutputFormat(
         case Failure(e) =>
           LOG.error("flush error occurred ", e)
           pendingFlush.decrementAndGet()
+          flushException = e
           // notify
           hasError = true
       }

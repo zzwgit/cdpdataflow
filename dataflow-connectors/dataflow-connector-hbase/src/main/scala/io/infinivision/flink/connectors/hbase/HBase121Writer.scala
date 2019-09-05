@@ -112,10 +112,12 @@ class HBase121Writer(
       }
 
       // if current rowkey == last rowkey  replace last
-      val lastPut = pendingPuts.get(pendingPuts.size() - 1)
-      if (java.util.Arrays.asList(lastPut.getRow).equals(java.util.Arrays.asList(rowKey))) {
-        pendingPuts.set(pendingPuts.size() - 1, put)
-        return
+      if (pendingPuts.size() > 0) {
+        val lastPut = pendingPuts.get(pendingPuts.size() - 1)
+        if (java.util.Arrays.asList(lastPut.getRow:_*).equals(java.util.Arrays.asList(rowKey:_*))) {
+          pendingPuts.set(pendingPuts.size() - 1, put)
+          return
+        }
       }
       if (batchCounter < batchSize) {
         pendingPuts.add(put)
@@ -146,7 +148,7 @@ class HBase121Writer(
   def flush(): Unit = {
     // flush pending puts
     val prev = System.currentTimeMillis()
-    table.put(pendingPuts)
+    table.batch(pendingPuts)
     val post = System.currentTimeMillis()
     if(post-prev> 1000) {
       LOG.info(s"flush $batchSize records to hbase cost ${post-prev}ms")
