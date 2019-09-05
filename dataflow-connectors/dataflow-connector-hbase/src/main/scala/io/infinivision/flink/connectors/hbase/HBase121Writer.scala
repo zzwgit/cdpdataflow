@@ -148,7 +148,7 @@ class HBase121Writer(
   def flush(): Unit = {
     // flush pending puts
     val prev = System.currentTimeMillis()
-    table.batch(pendingPuts)
+    table.put(pendingPuts)
     val post = System.currentTimeMillis()
     if(post-prev> 1000) {
       LOG.info(s"flush $batchSize records to hbase cost ${post-prev}ms")
