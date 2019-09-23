@@ -26,7 +26,7 @@ public class JsonArraySizeFunction extends ScalarFunction {
         if (null == values[ARRAY_IDX]) {
             return result;
         }
-        JSONArray array = JSON.parseArray((String) values[ARRAY_IDX]);
+        JSONArray array = Utils.getOrParse(values[0]);
 
         return array.size();
 

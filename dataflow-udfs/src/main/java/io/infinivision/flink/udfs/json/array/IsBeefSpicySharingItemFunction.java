@@ -20,14 +20,14 @@ public class IsBeefSpicySharingItemFunction extends ScalarFunction {
 		}
 
 		if (beefSpicy.contains(type)) {
-			JSONArray protein = JSON.parseArray((String) args[2]);
+			JSONArray protein = Utils.getOrParse(args[2]);
 			JSONArray level8 = null;
 			if (type.contains("spicy")) {
-				level8 = JSON.parseArray((String) args[3]);
+				level8 = Utils.getOrParse(args[3]);
 			}
 			for (int i = 0; i < level1.size(); i++) {
 				String var = (String) level1.get(i);
-				if (!var.contains("ALC Entrée") || !var.contains("EVM") || !var.contains("Other Meal")) {
+				if (!var.contains("ALC Entrée") && !var.contains("EVM") && !var.contains("Other Meal")) {
 					result.add(0);
 					continue;
 				}
@@ -37,14 +37,14 @@ public class IsBeefSpicySharingItemFunction extends ScalarFunction {
 				} else {
 					String var3 = level8.getString(i);
 					if (type.contains("non")) {
-						result.add(var2.contains("CHICKEN") && var3.contains("Spicy") ? 1 : 0);
-					} else {
 						result.add(var2.contains("CHICKEN") && !var3.contains("Spicy") ? 1 : 0);
+					} else {
+						result.add(var2.contains("CHICKEN") && var3.contains("Spicy") ? 1 : 0);
 					}
 				}
 			}
 		} else {
-			JSONArray level3 = JSON.parseArray((String) args[2]);
+			JSONArray level3 = Utils.getOrParse(args[2]);
 			JSONArray qty;
 			if (args[3] instanceof JSONArray) {
 				qty = (JSONArray) args[3];

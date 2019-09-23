@@ -10,27 +10,15 @@ public class AddonSalesFunction extends ScalarFunction {
 
 	public BigDecimal eval(Object... args) {
 		BigDecimal grossSales = (BigDecimal) args[0];
-		JSONArray items;
-		if (args[1] instanceof JSONArray) {
-			items = (JSONArray) args[1];
-		} else {
-			items = JSON.parseArray((String) args[1]);
-		}
-		JSONArray prices;
-		if (args[2] instanceof JSONArray) {
-			prices = (JSONArray) args[2];
-		} else {
-			prices = JSON.parseArray((String) args[2]);
-		}
-		JSONArray qty;
-		if (args[3] instanceof JSONArray) {
-			qty = (JSONArray) args[3];
-		} else {
-			qty = JSON.parseArray((String) args[3]);
-		}
+		JSONArray items = Utils.getOrParse(args[1]);
+		JSONArray prices = Utils.getOrParse(args[2]);
+		JSONArray qty = Utils.getOrParse(args[3]);
 		JSONArray excludeItems;
 		if (args[4] instanceof JSONArray) {
 			excludeItems = (JSONArray) args[4];
+		} else if (!((String) args[4]).startsWith("[")) {
+			excludeItems = new JSONArray();
+			excludeItems.add(args[4]);
 		} else {
 			excludeItems = JSON.parseArray((String) args[4]);
 		}
