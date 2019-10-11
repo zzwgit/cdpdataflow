@@ -33,6 +33,9 @@ public class JsonArraySizeFunction extends ScalarFunction {
     }
 
     public static void main(String[] args) {
+        JSONArray a1 = new JSONArray();
+        a1.add("aaa");
+        System.out.println(a1.contains(""));
         JsonArraySizeFunction contains = new JsonArraySizeFunction();
 
 //        System.err.println(contains.eval("[1.90000,2.3123455631234,3.31234556312345]"));

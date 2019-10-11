@@ -12,6 +12,8 @@ public class UUIDPartitionFunction extends ScalarFunction {
 	private int level = -1;
 	private double step;
 	private int[] randomInts;  // 每个partition 的 随机编号, 默认400w个(16M的大小), 所以partition数目不要超过400w
+	// 防止为null和blank的全部落到同一个slot
+	private int nullBlankCount;
 
 	public UUIDPartitionFunction() {
 		int scale = 10;  // 放大倍数
@@ -36,10 +38,15 @@ public class UUIDPartitionFunction extends ScalarFunction {
 	}
 
 	public int eval(String mid, int partition, int isPartitionNumEqualToSlotNum) {
-		if (mid == null || mid.length() == 0) return 0;
+		if (mid == null || mid.length() == 0) return nullBlankCount++;
+
 		// 计算 partition 对应到 mid前几位字符
 		if (level == -1) {
-			calcLevel(partition);
+			synchronized (this) {
+				if (level == -1) {
+					calcLevel(partition);
+				}
+			}
 		}
 		// 截取 mid 前 level个字符计算在哪个partition
 		int l = Math.min(level, mid.length());
@@ -102,7 +109,7 @@ public class UUIDPartitionFunction extends ScalarFunction {
 		System.out.println("\\N");
 		for (int i = 0; i < 20; i++) {
 			String uuid = UUID.randomUUID().toString();
-			int a = f.eval(uuid, 3008000);
+			int a = f.eval(uuid, 45, 1);
 			System.out.print(uuid);
 			System.out.print("  ");
 			System.out.println(a);
