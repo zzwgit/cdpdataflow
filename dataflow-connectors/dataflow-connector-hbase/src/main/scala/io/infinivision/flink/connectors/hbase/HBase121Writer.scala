@@ -119,10 +119,9 @@ class HBase121Writer(
           return
         }
       }
-      if (batchCounter < batchSize) {
-        pendingPuts.add(put)
-        batchCounter += 1
-      } else {
+      pendingPuts.add(put)
+      batchCounter += 1
+      if (batchCounter >= batchSize) {
         flush()
       }
     } else {
@@ -136,10 +135,9 @@ class HBase121Writer(
         }
       }
 
-      if (batchCounter < batchSize) {
-        pendingDeletes.add(delete)
-        batchCounter += 1
-      } else {
+      pendingDeletes.add(delete)
+      batchCounter += 1
+      if (batchCounter >= batchSize) {
         flush()
       }
     }
