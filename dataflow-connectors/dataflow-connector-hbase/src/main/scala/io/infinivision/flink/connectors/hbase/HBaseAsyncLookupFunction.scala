@@ -129,6 +129,7 @@ class HBaseAsyncLookupFunction(
 
     hClient = HbaseClientHolder.get(asyncConfig)
     if (cacheConfig.hasCache) {
+      LOG.info("cache is enabled ... cache type = {}",cacheConfig.getType.name())
       if (cacheConfig.isLRU) {
         this.cache = buildCache(context.getMetricGroup)
       } else {
@@ -182,9 +183,19 @@ class HBaseAsyncLookupFunction(
 
   def eval(resultFuture: ResultFuture[BaseRow], rowKey: Object): Unit = {
 
+    if (rowKey == null) {
+      resultFuture.complete(Collections.emptyList())
+      return
+    }
+
     val rowKey2 = rowKey match {
       case _: BinaryString => rowKey.asInstanceOf[BinaryString].toString
       case _ => rowKey
+    }
+
+    if ("".equals(rowKey2)) {
+      resultFuture.complete(Collections.emptyList())
+      return
     }
 
     val rk = inputFieldSerializers.get(rowKeySourceIndex).toHBaseBytes(rowKey2)
@@ -210,7 +221,7 @@ class HBaseAsyncLookupFunction(
     val getRequest: GetRequest = new GetRequest(hbaseTableName, rk)
     if (familyCount == 1) {
       getRequest.family(qualifierList.get(0).f0)
-      qualifierList.asScala.foreach(e => getRequest.qualifier(e.f1))
+      getRequest.qualifiers(qualifierList.asScala.map(_.f1).toArray)
     }
     val defered = hClient.get(getRequest)
 
