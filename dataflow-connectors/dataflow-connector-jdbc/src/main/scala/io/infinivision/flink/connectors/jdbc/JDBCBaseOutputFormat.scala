@@ -1,7 +1,7 @@
 package io.infinivision.flink.connectors.jdbc
 
 import java.lang.{Boolean => JBool}
-import java.net.InetAddress
+import java.net.{ConnectException, InetAddress, SocketTimeoutException}
 import java.sql.{Connection, DriverManager, PreparedStatement, SQLException}
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 import java.util.concurrent.{ExecutorService, Executors, TimeUnit}
@@ -11,24 +11,25 @@ import org.apache.flink.api.java.tuple.{Tuple2 => JTuple2}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.table.util.Logging
 import org.apache.flink.types.Row
+import org.apache.http.conn.ConnectTimeoutException
 
 import scala.concurrent._
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 abstract class JDBCBaseOutputFormat(
-    private val userName: String,
-    private val password: String,
-    private val driverName: String,
-    private val driverVersion: String,
-    private var dbURL: String,
-    private val tableName: String,
-    private val fieldNames: Array[String],
-    private val fieldSQLTypes: Array[Int],
-    private val servers: Option[Array[String]],
-    private val asyncFlush: Boolean
-) extends RichOutputFormat[JTuple2[JBool, Row]]
-    with Logging {
+                                     private val userName: String,
+                                     private val password: String,
+                                     private val driverName: String,
+                                     private val driverVersion: String,
+                                     private var dbURL: String,
+                                     private val tableName: String,
+                                     private val fieldNames: Array[String],
+                                     private val fieldSQLTypes: Array[Int],
+                                     private val servers: Option[Array[String]],
+                                     private val asyncFlush: Boolean
+                                   ) extends RichOutputFormat[JTuple2[JBool, Row]]
+  with Logging {
 
   protected var dbConn: Connection = _
   protected var statement: PreparedStatement = _
@@ -37,12 +38,12 @@ abstract class JDBCBaseOutputFormat(
   private var lastFlushTime: Long = 0
   private var sql: String = _
   @transient private var taskExecutor: ExecutorService = _
-  @transient implicit  private var ec:ExecutionContext = _
-  @volatile private var  hasError: Boolean = false
+  @transient implicit private var ec: ExecutionContext = _
+  @volatile private var hasError: Boolean = false
   private var flushException: java.lang.Throwable = _
   private val pendingFlush = new AtomicInteger(0)
   private var fillBatchMoreThanOneSecond: Boolean = false
-  private var lastLoggingFlushTime: Long= 0
+  private var lastLoggingFlushTime: Long = 0
   private var taskNum: Int = 0
 
   def this(userName: String,
@@ -75,15 +76,15 @@ abstract class JDBCBaseOutputFormat(
            fieldNames: Array[String],
            fieldSQLTypes: Array[Int]) {
     this(userName,
-         password,
-         driverName,
-         driverVersion,
-         dbURL,
-         tableName,
-         fieldNames,
-         fieldSQLTypes,
-         Option.empty,
-         false)
+      password,
+      driverName,
+      driverVersion,
+      dbURL,
+      tableName,
+      fieldNames,
+      fieldSQLTypes,
+      Option.empty,
+      false)
   }
 
   override def configure(parameters: Configuration): Unit = {}
@@ -114,8 +115,8 @@ abstract class JDBCBaseOutputFormat(
     }
     establishConnection()
     if (dbConn.getMetaData
-          .getTables(null, null, tableName, null)
-          .next()) {
+      .getTables(null, null, tableName, null)
+      .next()) {
       // prepare the upsert sql
       sql = prepareSql
       LOG.info(s"prepare sql $sql")
@@ -147,7 +148,7 @@ abstract class JDBCBaseOutputFormat(
   private def logDebugFlush(stmt: PreparedStatement): Unit = {
     val curFlushTime = System.currentTimeMillis()
     flushBatch(stmt)
-    val flushCost = System.currentTimeMillis()-curFlushTime
+    val flushCost = System.currentTimeMillis() - curFlushTime
     val batchCostTime = curFlushTime - lastFlushTime
     if (batchCostTime > 1000) {
       fillBatchMoreThanOneSecond = true
@@ -166,8 +167,28 @@ abstract class JDBCBaseOutputFormat(
     }
   }
 
-  private def flushBatch(stmt:PreparedStatement): Unit = {
-      stmt.executeBatch()
+  private def flushBatch(stmt: PreparedStatement): Unit = {
+    var i = 10
+    while (true) {
+      Try {
+        stmt.executeBatch()
+      } match {
+        case Success(_) => return
+        case Failure(ex) =>
+          i -= 1
+          // 注意 ex永远是ClickHouseException, 需要取 ex.getCause
+          ex.getCause match {
+            // timeout 重试 10 次
+            case e@(_: ConnectException | _: SocketTimeoutException | _: ConnectTimeoutException) =>
+              if (i <= 0) {
+                LOG.error("connection timeout, retried 10 times still cannot recover, exit...")
+                throw ex
+              }
+              Thread.sleep(1000 * 10)
+            case _ => throw ex
+          }
+      }
+    }
   }
 
   def flush(): Unit = {
@@ -196,7 +217,7 @@ abstract class JDBCBaseOutputFormat(
       }
     } else {
       if (p >= 1) {
-        LOG.debug("too many pending flush... {}",p)
+        LOG.debug("too many pending flush... {}", p)
       }
       logDebugFlush(statement)
     }
