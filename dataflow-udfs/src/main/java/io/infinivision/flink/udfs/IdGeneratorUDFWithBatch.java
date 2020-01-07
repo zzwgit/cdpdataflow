@@ -93,7 +93,13 @@ public class IdGeneratorUDFWithBatch extends ScalarFunction implements ListCheck
                 });
                 next.init(value[0], value[1]);
             } else {
-                throw new RuntimeException("IdGeneratorUDFWithBatch" + jsonObject.getString("error"));
+                //throw new RuntimeException("IdGeneratorUDFWithBatch" + jsonObject.getString("error"));
+                LOG.error("IdGeneratorUDFWithBatch" + jsonObject.getString("error"));
+                try {
+                    Thread.sleep(5 * 1000L);
+                } catch (InterruptedException e) {
+                    LOG.error("IdGeneratorUDFWithBatch", e);
+                }
             }
 
         }
