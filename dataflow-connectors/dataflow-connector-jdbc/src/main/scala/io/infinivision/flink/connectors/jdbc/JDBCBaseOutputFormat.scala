@@ -168,7 +168,7 @@ abstract class JDBCBaseOutputFormat(
   }
 
   private def flushBatch(stmt: PreparedStatement): Unit = {
-    var i = 10
+    var i = 100
     while (true) {
       Try {
         stmt.executeBatch()
@@ -179,12 +179,12 @@ abstract class JDBCBaseOutputFormat(
           // 注意 ex永远是ClickHouseException, 需要取 ex.getCause
           ex.getCause match {
             // timeout 重试 10 次
-            case e@(_: ConnectException | _: SocketTimeoutException | _: ConnectTimeoutException) =>
+            case e@(_: Throwable) =>
               if (i <= 0) {
                 LOG.error("connection timeout, retried 10 times still cannot recover, exit...")
                 throw ex
               }
-              Thread.sleep(1000 * 10)
+              Thread.sleep(1000 * 30)
             case _ => throw ex
           }
       }
