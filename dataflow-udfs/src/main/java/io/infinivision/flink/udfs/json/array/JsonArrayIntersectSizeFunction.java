@@ -31,7 +31,7 @@ public class JsonArrayIntersectSizeFunction extends ScalarFunction {
 		}
 
 		JSONArray exclude;
-		if (values[0] instanceof String) {
+		if (values[1] instanceof String) {
 			exclude = JSON.parseArray((String) values[1]);
 		} else if (values[1] instanceof JSONArray) {
 			exclude = (JSONArray) values[1];
