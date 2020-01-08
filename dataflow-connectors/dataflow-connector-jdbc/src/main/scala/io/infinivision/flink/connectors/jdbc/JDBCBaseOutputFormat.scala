@@ -168,7 +168,7 @@ abstract class JDBCBaseOutputFormat(
   }
 
   private def flushBatch(stmt: PreparedStatement): Unit = {
-    var i = 100
+    var i = 30
     while (true) {
       Try {
         stmt.executeBatch()
@@ -184,7 +184,7 @@ abstract class JDBCBaseOutputFormat(
                 LOG.error("connection timeout, retried 10 times still cannot recover, exit...")
                 throw ex
               }
-              Thread.sleep(1000 * 30)
+              Thread.sleep(1000 * 60 )
             case _ => throw ex
           }
       }
