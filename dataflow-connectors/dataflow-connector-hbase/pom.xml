@@ -45,15 +45,6 @@ under the License.
         </dependency>
         <dependency>
             <groupId>com.alibaba.blink</groupId>
-            <artifactId>flink-java</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.alibaba.blink</groupId>
-            <artifactId>flink-scala_${scala.binary.version}</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba.blink</groupId>
             <artifactId>flink-hbase_${scala.binary.version}</artifactId>
             <version>${flink.version}</version>
             <exclusions>
@@ -63,14 +54,7 @@ under the License.
                 </exclusion>
 
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba.blink</groupId>
-            <artifactId>flink-table_${scala.binary.version}</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba.blink</groupId>
-            <artifactId>flink-streaming-scala_${scala.binary.version}</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -103,6 +87,7 @@ under the License.
                     <artifactId>hadoop-hdfs</artifactId>
                 </exclusion>
             </exclusions>
+            <scope>provided</scope>
         </dependency>
 
         <!--Async HBase Client-->
@@ -113,6 +98,10 @@ under the License.
                 <exclusion>
                     <groupId>org.slf4j</groupId>
                     <artifactId>log4j-over-slf4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>zookeeper</artifactId>
+                    <groupId>org.apache.zookeeper</groupId>
                 </exclusion>
             </exclusions>
             <version>1.8.0</version>
