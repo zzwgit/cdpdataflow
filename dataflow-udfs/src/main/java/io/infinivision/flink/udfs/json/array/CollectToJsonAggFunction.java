@@ -13,7 +13,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class CollectToJsonAggFunction extends AggregateFunction<byte[], GenericRow> {
+public class CollectToJsonAggFunction extends AggregateFunction<String, GenericRow> {
 	// 封装 数据 和 排序参考key
 	static class Tuple2 implements Serializable {
 		private static final long serialVersionUID = 4827706635758733641L;
@@ -123,7 +123,7 @@ public class CollectToJsonAggFunction extends AggregateFunction<byte[], GenericR
 	}
 
 	@Override
-	public byte[] getValue(GenericRow acc) {
+	public String getValue(GenericRow acc) {
 		ListView<Tuple2> list = (ListView<Tuple2>) acc.getField(0);
 		try {
 			Iterable<Tuple2> values = list.get();
@@ -174,12 +174,12 @@ public class CollectToJsonAggFunction extends AggregateFunction<byte[], GenericR
 								.map(e -> e.data)
 								.collect(Collectors.toList())
 				);
-				return outStr.getBytes("UTF-8");
+				return outStr;
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return null;
+		return "[]";
 	}
 
 	public void resetAccumulator(GenericRow acc) {
@@ -191,10 +191,10 @@ public class CollectToJsonAggFunction extends AggregateFunction<byte[], GenericR
 
 	@Override
 	public DataType getResultType() {
-		return DataTypes.BYTE_ARRAY;
+		return DataTypes.STRING;
 	}
 
-	public static void main(String[] args) throws Exception {
+	/*public static void main(String[] args) throws Exception {
 		CollectToJsonAggFunction s = new CollectToJsonAggFunction();
 
 		GenericRow acc = new GenericRow(2);
@@ -223,5 +223,45 @@ public class CollectToJsonAggFunction extends AggregateFunction<byte[], GenericR
 //        JSONArray array =JSON.parseArray(new String(result1,"UTF-8"));
 //        array.toArray();
 
+	}*/
+
+	public static void main(String[] args){
+
+		Map<Character, String> escapes;
+		escapes = new HashMap<>();
+		escapes.put('\\', "\\\\");
+		escapes.put('\n', "\\n");
+		escapes.put('\t', "\\t");
+		escapes.put('\b', "\\b");
+		escapes.put('\f', "\\f");
+		escapes.put('\r', "\\r");
+		escapes.put('\0', "\\0");
+		escapes.put('\'', "\\'");
+		escapes.put('`', "\\`");
+
+		List<Integer> list = new ArrayList<Integer>();
+		//list.add(2);
+		//list.add(3);
+		//list.add(1);
+
+		String outStr = JSON.toJSONString(list);
+
+		System.out.println(outStr);
+
+		StringBuilder sb = new StringBuilder(outStr.length() + 5);
+		boolean changed = false;
+		for (int i = 0; i < outStr.length(); i++) {
+			char c = outStr.charAt(i);
+			if (escapes.containsKey(c)) {
+				sb.append(escapes.get(c));
+			} else if (c == '"') { // " may be changed to '
+				boolean needChange = outStr.charAt(i - 1) != '\\';
+				sb.append(needChange ? '\'' : c);
+				changed |= needChange;
+			} else {
+				sb.append(c);
+			}
+		}
+		System.out.println(sb.toString());
 	}
 }

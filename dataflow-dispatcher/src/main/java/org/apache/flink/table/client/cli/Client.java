@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * client.
+ *  SQL CLI client.(org.apache.flink.table.client.cli.CliClient).
  */
 public class Client {
 
