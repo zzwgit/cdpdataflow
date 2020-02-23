@@ -180,6 +180,7 @@ abstract class JDBCBaseOutputFormat(
           ex.getCause match {
             // timeout 重试 10 次
             case e@(_: Throwable) =>
+              LOG.warn("clickhouse flushBatch error, retry@",ex)
               if (i <= 0) {
                 LOG.error("connection timeout, retried 10 times still cannot recover, exit...")
                 throw ex
