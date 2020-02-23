@@ -44,10 +44,6 @@ under the License.
             <artifactId>dataflow-connectors-jdbc</artifactId>
             <version>1.0</version>
         </dependency>
-        <dependency>
-            <groupId>com.alibaba.blink</groupId>
-            <artifactId>flink-table_${scala.binary.version}</artifactId>
-        </dependency>
         <!-- clickhouse driver-->
         <dependency>
             <groupId>ru.yandex.clickhouse</groupId>
@@ -60,10 +56,6 @@ under the License.
             <version>3.3.2</version>
         </dependency>
 
-        <dependency>
-            <groupId>com.alibaba.blink</groupId>
-            <artifactId>flink-streaming-scala_${scala.binary.version}</artifactId>
-        </dependency>
 
     </dependencies>
 
