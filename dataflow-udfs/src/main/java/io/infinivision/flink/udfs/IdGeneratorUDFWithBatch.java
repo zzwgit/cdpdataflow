@@ -13,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -48,10 +50,20 @@ public class IdGeneratorUDFWithBatch extends ScalarFunction implements ListCheck
     public Long eval(Object... values) throws Exception {
 
         while (true) {
+            //返回当前缓存的id
             if ((currentId.getBegin() != 0 && currentId.getEnd() != 0) && (currentId.getBegin() <= currentId.getEnd())) {
                 return currentId.getBeginAndNext();
             }
-            requestBatchIds(currentId);
+            //缓存id为空时，请求新的batch，请求异常时，抛弃当前url重试（间隔10S）
+            int currentIndex = RANDOM.nextInt(urlList.size());
+            try {
+                requestBatchIds(currentId, currentIndex);
+            } catch (SocketTimeoutException | ConnectException e) {
+                LOG.error("IdGeneratorUDFWithBatch request error @ "+urlList.get(currentIndex), e);
+//                System.out.println("IdGeneratorUDFWithBatch request error @ "+urlList.get(currentIndex));
+                urlList.remove(currentIndex);
+                Thread.sleep(10 * 1000);
+            }
         }
     }
 
@@ -69,7 +81,7 @@ public class IdGeneratorUDFWithBatch extends ScalarFunction implements ListCheck
         }
     }
 
-    public void requestBatchIds(IdDTO next) throws IOException {
+    public void requestBatchIds(IdDTO next, int currentIndex) throws IOException {
 
         // 表单键值对
         RequestBody formBody = new FormBody.Builder()
@@ -77,7 +89,7 @@ public class IdGeneratorUDFWithBatch extends ScalarFunction implements ListCheck
 
         // 请求
         Request request = new Request.Builder()
-                .url(urlList.get(RANDOM.nextInt(urlList.size())))
+                .url(urlList.get(currentIndex))
                 .post(formBody)
                 .build();
 
